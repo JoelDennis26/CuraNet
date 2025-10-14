@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CuraNet - Doctors List</title>
+    <style>
+      :root {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #141414;
+        --text-primary: #ffffff;
+        --text-secondary: #a1a1a1;
+        --border-color: #2a2a2a;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+        --primary-color: #2196f3;
+        --success-color: #4caf50;
+        --warning-color: #ffc107;
+        --danger-color: #f44336;
+      }
+
+      [data-theme="dark"] {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f3f4f6;
+        --text-primary: #111827;
+        --text-secondary: #4b5563;
+        --border-color: #e5e7eb;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+      }
+
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        transition: background-color 0.3s, color 0.3s;
+        min-height: 100vh;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        padding: 0.5rem;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+      }
+
+      .theme-toggle svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--text-primary);
+      }
+
+      .container {
+        margin: 0 20px;
+        padding: 0 0%;
+        padding-top: 1rem;
+      }
+
+      .page-header {
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .page-header h1 {
+        font-size: 2rem;
+        color: var(--text-primary);
+      }
+
+      .filters {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      select,
+      input {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 1rem;
+      }
+
+      select:focus,
+      input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+
+      .doctors-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+      }
+
+      .doctor-card {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .doctor-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 20px var(--text-primary);
+      }
+
+      .doctor-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+      }
+
+      .doctor-info {
+        padding: 1.5rem;
+      }
+
+      .doctor-name {
+        font-size: 1.25rem;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+      }
+
+      .doctor-department {
+        color: var(--primary-color);
+        font-weight: 500;
+        margin-bottom: 1rem;
+      }
+
+      .doctor-description {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      .doctor-contact {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .btn-primary {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 0.2s;
+      }
+
+      .btn-primary:hover {
+        transform: scale(1.05);
+      }
+
+      @media (max-width: 768px) {
+        .page-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .filters {
+          flex-direction: column;
+        }
+
+        .doctors-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a href="../index.html" style="text-decoration: none">
+      <span
+        style="
+          text-align: left;
+          font-size: 1.5rem;
+          font-weight: bold;
+          padding-left: 1.5rem;
+          color: var(--text-primary);
+          margin-top: 1rem;
+          display: inline-block;
+        "
+        >CuraNet HMS</span
+      >
+    </a>
+
+    <button
+      class="theme-toggle"
+      onclick="toggleTheme()"
+      aria-label="Toggle theme"
+    >
+      <svg
+        class="sun-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"
+        />
+      </svg>
+    </button>
+
+    <div class="container">
+      <header class="page-header">
+        <h1>Our Doctors</h1>
+        <div class="filters">
+          <select id="departmentFilter">
+            <option value="">All Departments</option>
+          </select>
+          <input
+            type="text"
+            id="searchDoctor"
+            placeholder="Search doctors..."
+          />
+        </div>
+      </header>
+
+      <div id="loading" class="loading-spinner" style="display: none">
+        <div class="spinner"></div>
+        <p>Loading doctors...</p>
+      </div>
+
+      <div class="doctors-grid" id="doctorsGrid">
+        <!-- Doctor cards will be populated dynamically -->
+      </div>
+    </div>
+
+    <script>
+      // Theme toggling functionality
+      function toggleTheme() {
+        const body = document.body;
+        if (body.hasAttribute("data-theme")) {
+          body.removeAttribute("data-theme");
+          localStorage.setItem("theme", "light");
+        } else {
+          body.setAttribute("data-theme", "dark");
+          localStorage.setItem("theme", "dark");
+        }
+      }
+
+      // Loading state management
+      function setLoading(isLoading) {
+        const loadingElement = document.getElementById("loading");
+        const doctorsGrid = document.getElementById("doctorsGrid");
+
+        loadingElement.style.display = isLoading ? "flex" : "none";
+        doctorsGrid.style.opacity = isLoading ? "0.5" : "1";
+        doctorsGrid.style.pointerEvents = isLoading ? "none" : "auto";
+      }
+
+      // Department loading functionality
+      async function loadDepartments() {
+        try {
+          const response = await fetch(
+            "http://localhost:8000/api/departments",
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to load departments: ${response.status}`);
+          }
+
+          const departments = await response.json();
+          const departmentFilter = document.getElementById("departmentFilter");
+
+          // Clear existing options except "All Departments"
+          while (departmentFilter.options.length > 1) {
+            departmentFilter.remove(1);
+          }
+
+          // Add departments to filter
+          departments.forEach((dept) => {
+            const option = document.createElement("option");
+            option.value = dept;
+            option.textContent = dept;
+            departmentFilter.appendChild(option);
+          });
+        } catch (error) {
+          console.error("Error loading departments:", error);
+          showError("Failed to load departments. Please refresh the page.");
+        }
+      }
+
+      // Doctor card creation - Updated without email and phone
+      function createDoctorCard(doctor) {
+        return `
+          <div class="doctor-card">
+            <img src="${doctor.image_url || "https://placehold.co/300x200"}" 
+                 alt="Dr. ${doctor.name}" 
+                 class="doctor-image"
+                 onerror="this.src='https://placehold.co/300x200'">
+            <div class="doctor-info">
+              <h3 class="doctor-name">Dr. ${doctor.name}</h3>
+              <p class="doctor-department">${doctor.department}</p>
+              <p class="doctor-description">${
+                doctor.description || "No description available"
+              }</p>
+              ${
+                localStorage.getItem("user_type") === "patient"
+                  ? `<a href="/appointments/book/${doctor.id}" class="btn-primary">Book Appointment</a>`
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+      }
+
+      // Error display functionality
+      function showError(message) {
+        const doctorsGrid = document.getElementById("doctorsGrid");
+        doctorsGrid.innerHTML = `<p class="error-message">${message}</p>`;
+      }
+
+      // Doctor loading functionality
+      async function loadDoctors(department = "", search = "") {
+        setLoading(true);
+        try {
+          let url = new URL("http://localhost:8000/api/doctors");
+
+          if (department) {
+            url.searchParams.append("department", department);
+          }
+          if (search) {
+            url.searchParams.append("search", search);
+          }
+
+          const response = await fetch(url, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to load doctors: ${response.status}`);
+          }
+
+          const doctors = await response.json();
+          const doctorsGrid = document.getElementById("doctorsGrid");
+          doctorsGrid.innerHTML = "";
+
+          if (!doctors || doctors.length === 0) {
+            doctorsGrid.innerHTML =
+              '<p class="no-results">No doctors found</p>';
+            return;
+          }
+
+          doctors.forEach((doctor) => {
+            doctorsGrid.innerHTML += createDoctorCard(doctor);
+          });
+        } catch (error) {
+          console.error("Error loading doctors:", error);
+          showError("Error loading doctors. Please try again later.");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      // Filter functionality
+      function filterDoctors() {
+        const department = document.getElementById("departmentFilter").value;
+        const searchText = document.getElementById("searchDoctor").value;
+        loadDoctors(department, searchText);
+      }
+
+      // Debounce function for search input
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      // Event listeners
+      document
+        .getElementById("departmentFilter")
+        .addEventListener("change", filterDoctors);
+      document
+        .getElementById("searchDoctor")
+        .addEventListener("input", debounce(filterDoctors, 300));
+
+      // Initialize page
+      document.addEventListener("DOMContentLoaded", async () => {
+        // Check authentication
+        //const token = localStorage.getItem("token");
+        //if (!token) {
+        //  window.location.href = "/login.html";
+        //  return;
+        //}
+
+        // Set theme from localStorage
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          document.body.setAttribute("data-theme", "dark");
+        }
+
+        try {
+          await loadDepartments();
+          await loadDoctors();
+        } catch (error) {
+          console.error("Initialization error:", error);
+          showError("Failed to initialize the page. Please refresh.");
+        }
+      });
+    </script>
+  </body>
+</html>
