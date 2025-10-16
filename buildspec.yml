@@ -8,13 +8,20 @@ phases:
       - echo Installing dependencies...
       - pip install --upgrade pip
       - pip install -r requirements.txt
+
+  pre_build:
+    commands:
+      - echo Checking DB connection...
+      - python -c "import pymysql, os; pymysql.connect(host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'), password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_NAME')); print('DB connected successfully!')"
+
   build:
     commands:
-      - echo Running database migrations...
+      - echo Running Alembic migrations on RDS...
       - alembic upgrade head
+
   post_build:
     commands:
-      - echo Build completed
+      - echo Build completed successfully!
 
 artifacts:
   files:
