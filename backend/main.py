@@ -58,7 +58,10 @@ async def get_current_user(
         return credentials.credentials
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid authentication")
-
+    
+@app.get("/")
+def root():
+    return {"message": "CuraNet API is running"}
 
 # API endpoints for doctor-list frontend
 @app.get("/api/departments", response_model=List[str])
