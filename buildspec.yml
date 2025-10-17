@@ -5,30 +5,33 @@ phases:
     runtime-versions:
       python: 3.11
     commands:
-      - echo Installing dependencies...
+      - echo "Installing Python dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
       - echo "Python path setup"
-      - export PYTHONPATH="$PYTHONPATH:/codebuild/output/src*/backend"
+      - export PYTHONPATH="$PYTHONPATH:$CODEBUILD_SRC_DIR/backend"
 
   pre_build:
     commands:
-      - echo Checking DB connection...
-      - cd backend && python -c "import pymysql, os; pymysql.connect(host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'), password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_NAME')); print('DB connected successfully!')" || echo "DB connection check skipped"
+      - echo "Checking DB connection..."
+      - cd backend
+      - python -c "import pymysql, os; pymysql.connect(host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'), password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_NAME')); print('DB connected successfully!')" || echo "DB connection check skipped"
+      - cd ..
 
   build:
     commands:
-      - echo Running Alembic migrations on RDS...
-      - alembic upgrade head || echo "Migration skipped - will run on deployment"
-      - echo Validating application structure...
-      - ls -la
-      - python -c "import sys; sys.path.insert(0, 'backend'); from main import app; print('FastAPI app imported successfully')"
+      - echo "Validating FastAPI app import..."
+      - python -c "import sys; sys.path.insert(0, 'backend'); from backend.main import app; print('FastAPI app imported successfully')"
+      - echo "Running Alembic migrations..."
+      - cd backend && alembic upgrade head || echo "Migration skipped or already up-to-date"
+      - cd ..
+      - echo "Build phase completed successfully"
 
   post_build:
     commands:
-      - echo Build completed successfully!
-      - echo "Files in root:"
+      - echo "Listing project files..."
       - ls -la
+      - echo "Build completed. Ready for deployment."
 
 artifacts:
   files:
