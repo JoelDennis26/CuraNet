@@ -22,7 +22,7 @@ phases:
       - alembic upgrade head || echo "Migration skipped - will run on deployment"
       - echo Validating application structure...
       - ls -la
-      - python -c "import sys; sys.path.insert(0, 'backend'); from backend.main import app; print('FastAPI app imported successfully')"
+      - python -c "import sys; sys.path.insert(0, 'backend'); from main import app; print('FastAPI app imported successfully')"
 
   post_build:
     commands:
