@@ -1,9 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 from datetime import datetime
+import os
 
 # Relative imports within backend package
 from . import schemas
@@ -31,6 +34,11 @@ from .crud import (
 from .schemas import AdminAppointmentResponse, AppointmentCreate, AppointmentUpdate
 
 app = FastAPI()
+
+# Mount static files
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+app.mount("/assets", StaticFiles(directory=os.path.join(base_dir, "assets")), name="assets")
+app.mount("/pages", StaticFiles(directory=os.path.join(base_dir, "pages")), name="pages")
 
 # CORS middleware configuration
 app.add_middleware(
@@ -68,6 +76,10 @@ async def get_current_user(
     
 @app.get("/")
 def root():
+    return FileResponse(os.path.join(base_dir, "index.html"))
+
+@app.get("/api")
+def api_root():
     return {"message": "CuraNet API is running"}
 
 # API endpoints for doctor-list frontend
