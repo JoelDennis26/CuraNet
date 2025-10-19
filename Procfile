@@ -1,1 +1,1 @@
-web: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT wsgi:application
+web: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT application:application
