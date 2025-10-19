@@ -1,1 +1,1 @@
-web: gunicorn -k uvicorn.workers.UvicornWorker -b :$PORT application:application
+web: mkdir -p /var/pids && gunicorn -k uvicorn.workers.UvicornWorker -b :$PORT backend.main:app --pid /var/pids/web.pid
