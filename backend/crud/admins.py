@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-import models
+from .. import models
 
 def verify_admin(db: Session, identifier: str, password: str):
     admin = db.query(models.Admin).filter(

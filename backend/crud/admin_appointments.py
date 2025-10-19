@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from models import Appointment, Patient, Doctor
-from schemas import AppointmentCreate, AppointmentUpdate, AdminAppointmentResponse
+from ..models import Appointment, Patient, Doctor
+from ..schemas import AppointmentCreate, AppointmentUpdate, AdminAppointmentResponse
 from fastapi import HTTPException
 from typing import List, Optional
 

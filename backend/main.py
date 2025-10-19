@@ -3,25 +3,32 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
-import models, schemas
 from datetime import datetime
-from database import SessionLocal
-from crud import patients, doctors, appointments, admins  # Add admins import
-from crud import patient_dashboard_header
-from crud import patient_profiles  # Change from patient_profile to patient_profiles
-from crud import patient_medical_history
-from crud import patient_dashboard
-from crud import admin_dashboard_header
-from crud import admin_dashboard
-from crud import admin_doctors 
-from crud import admin_patients
-from crud import admin_appointments
-from schemas import AdminAppointmentResponse, AppointmentCreate, AppointmentUpdate
-from crud import doctor_dashboard_header
-from crud import doctor_dashboard
-from crud import doctor_profiles
-from crud import doctor_appointments
-from crud import doctor_patients
+
+# Relative imports within backend package
+from . import schemas
+from .database import SessionLocal
+from .crud import (
+    patients,
+    doctors,
+    appointments,
+    admins,
+    patient_dashboard_header,
+    patient_profiles,
+    patient_medical_history,
+    patient_dashboard,
+    admin_dashboard_header,
+    admin_dashboard,
+    admin_doctors,
+    admin_patients,
+    admin_appointments,
+    doctor_dashboard_header,
+    doctor_dashboard,
+    doctor_profiles,
+    doctor_appointments,
+    doctor_patients,
+)
+from .schemas import AdminAppointmentResponse, AppointmentCreate, AppointmentUpdate
 
 app = FastAPI()
 

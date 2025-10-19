@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from models import Doctor
-from schemas import DoctorHeaderResponse
+from ..models import Doctor
+from ..schemas import DoctorHeaderResponse
 
 def get_doctor_dashboard_info(db: Session, username: str) -> DoctorHeaderResponse:
     """
