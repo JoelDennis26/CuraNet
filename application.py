@@ -1,13 +1,13 @@
 import sys
 import os
 
-# Add the backend directory to Python path
+# Add backend folder to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
-# Import the FastAPI app
+# Import FastAPI app
 from backend.main import app
 
-# Expose app for Gunicorn
+# Expose for Gunicorn / EB
 application = app
 
 if __name__ == "__main__":
