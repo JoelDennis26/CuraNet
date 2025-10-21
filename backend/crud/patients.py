@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-import models
-import schemas
+from .. import models
+from .. import schemas
 
 def get_patient_by_email(db: Session, email: str):
     return db.query(models.Patient).filter(models.Patient.email == email).first()

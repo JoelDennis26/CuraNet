@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, distinct
 from fastapi import HTTPException
-import models
-import schemas
+from .. import models
+from .. import schemas
 from typing import List
 
 def create_doctor(db: Session, doctor: schemas.DoctorCreate):

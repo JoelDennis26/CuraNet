@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-import models
+from .. import models
 from typing import Optional
 
 def get_patient_dashboard_info(db: Session, username: str) -> Optional[models.Patient]:

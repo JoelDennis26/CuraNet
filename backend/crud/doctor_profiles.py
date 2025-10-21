@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-import models
+from .. import models
 from typing import Optional
 
 def get_doctor_profile(db: Session, username: str) -> Optional[models.Doctor]:

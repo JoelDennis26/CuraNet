@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import distinct
-import models
+from .. import models
 from typing import List
 
 def get_doctor_by_name(db: Session, username: str):

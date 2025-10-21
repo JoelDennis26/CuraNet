@@ -1,29 +1,44 @@
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
-import models, schemas
 from datetime import datetime
-from database import SessionLocal
-from crud import patients, doctors, appointments, admins  # Add admins import
-from crud import patient_dashboard_header
-from crud import patient_profiles  # Change from patient_profile to patient_profiles
-from crud import patient_medical_history
-from crud import patient_dashboard
-from crud import admin_dashboard_header
-from crud import admin_dashboard
-from crud import admin_doctors 
-from crud import admin_patients
-from crud import admin_appointments
-from schemas import AdminAppointmentResponse, AppointmentCreate, AppointmentUpdate
-from crud import doctor_dashboard_header
-from crud import doctor_dashboard
-from crud import doctor_profiles
-from crud import doctor_appointments
-from crud import doctor_patients
+import os
+
+# Relative imports within backend package
+from . import schemas
+from .database import SessionLocal
+from .crud import (
+    patients,
+    doctors,
+    appointments,
+    admins,
+    patient_dashboard_header,
+    patient_profiles,
+    patient_medical_history,
+    patient_dashboard,
+    admin_dashboard_header,
+    admin_dashboard,
+    admin_doctors,
+    admin_patients,
+    admin_appointments,
+    doctor_dashboard_header,
+    doctor_dashboard,
+    doctor_profiles,
+    doctor_appointments,
+    doctor_patients,
+)
+from .schemas import AdminAppointmentResponse, AppointmentCreate, AppointmentUpdate
 
 app = FastAPI()
+
+# Mount static files
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+app.mount("/assets", StaticFiles(directory=os.path.join(base_dir, "assets")), name="assets")
+app.mount("/pages", StaticFiles(directory=os.path.join(base_dir, "pages")), name="pages")
 
 # CORS middleware configuration
 app.add_middleware(
@@ -58,7 +73,14 @@ async def get_current_user(
         return credentials.credentials
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid authentication")
+    
+@app.get("/")
+def root():
+    return FileResponse(os.path.join(base_dir, "index.html"))
 
+@app.get("/api")
+def api_root():
+    return {"message": "CuraNet API is running"}
 
 # API endpoints for doctor-list frontend
 @app.get("/api/departments", response_model=List[str])
