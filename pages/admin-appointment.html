@@ -510,7 +510,7 @@
 
         try {
           const response = await fetch(
-            `http://127.0.0.1:8000/admin/dashboard-info/${adminId}`
+            `/admin/dashboard-info/${adminId}`
           );
           const data = await response.json();
 
@@ -531,7 +531,7 @@
       async function fetchAllAppointments() {
         try {
           const response = await fetch(
-            "http://127.0.0.1:8000/admin/appointments-list"
+            "/admin/appointments-list"
           );
           const appointments = await response.json();
 
@@ -562,7 +562,7 @@
       async function fetchPatients() {
         try {
           const response = await fetch(
-            "http://127.0.0.1:8000/admin/patients-list"
+            "/admin/patients-list"
           );
           const patients = await response.json();
           const select = document.getElementById("patientSelect");
@@ -579,7 +579,7 @@
       async function fetchDoctors() {
         try {
           const response = await fetch(
-            "http://127.0.0.1:8000/admin/doctors-list"
+            "/admin/doctors-list"
           );
           const doctors = await response.json();
           const select = document.getElementById("doctorSelect");
@@ -597,7 +597,7 @@
         try {
           const numericId = appointmentId.replace("A", "");
           const response = await fetch(
-            `http://127.0.0.1:8000/admin/appointment/${numericId}`
+            `/admin/appointment/${numericId}`
           );
           const appointment = await response.json();
 
@@ -629,7 +629,7 @@
 
             try {
               const updateResponse = await fetch(
-                `http://127.0.0.1:8000/admin/appointment/${numericId}`,
+                `/admin/appointment/${numericId}`,
                 {
                   method: "PUT",
                   headers: {
@@ -686,7 +686,7 @@
 
           try {
             const response = await fetch(
-              "http://127.0.0.1:8000/admin/appointment",
+              "/admin/appointment",
               {
                 method: "POST",
                 headers: {

@@ -543,7 +543,7 @@
 
         try {
           const response = await fetch(
-            `http://127.0.0.1:8000/admin/dashboard-info/${adminId}`
+            `/admin/dashboard-info/${adminId}`
           );
           const data = await response.json();
 
@@ -564,7 +564,7 @@
       async function fetchAllPatients() {
         try {
           const response = await fetch(
-            "http://127.0.0.1:8000/admin/patients-list"
+            "/admin/patients-list"
           );
           const patients = await response.json();
 
@@ -597,7 +597,7 @@
         try {
           const numericId = patientId.replace("P", "");
           const response = await fetch(
-            `http://127.0.0.1:8000/admin/patient/${numericId}`
+            `/admin/patient/${numericId}`
           );
           const patient = await response.json();
 
@@ -638,7 +638,7 @@
 
             try {
               const updateResponse = await fetch(
-                `http://127.0.0.1:8000/admin/patient/${numericId}`,
+                `/admin/patient/${numericId}`,
                 {
                   method: "PUT",
                   headers: {
@@ -678,7 +678,7 @@
           try {
             const numericId = patientId.replace("P", "");
             const response = await fetch(
-              `http://127.0.0.1:8000/admin/patient/${numericId}`,
+              `/admin/patient/${numericId}`,
               {
                 method: "DELETE",
                 headers: {
@@ -720,7 +720,7 @@
 
           try {
             const response = await fetch(
-              "http://127.0.0.1:8000/patients/register",
+              "/patients/register",
               {
                 method: "POST",
                 headers: {

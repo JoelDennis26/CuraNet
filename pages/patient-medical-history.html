@@ -452,7 +452,7 @@
                 return;
               }
         
-              const response = await fetch(`http://localhost:8000/patient/medical-history/${username}`);
+              const response = await fetch(`/patient/medical-history/${username}`);
               if (!response.ok) {
                 throw new Error("Failed to fetch medical history info");
               }
@@ -488,7 +488,7 @@
           // Fetch doctors for dropdown
           async function fetchDoctors() {
             try {
-              const response = await fetch("http://127.0.0.1:8000/admin/doctors-list");
+              const response = await fetch("/admin/doctors-list");
               const doctors = await response.json();
               const select = document.getElementById("doctorSelect");
               select.innerHTML = '<option value="">Select Doctor</option>';
@@ -538,7 +538,7 @@
             };
         
             try {
-              const response = await fetch("http://127.0.0.1:8000/admin/appointment", {
+              const response = await fetch("/admin/appointment", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
