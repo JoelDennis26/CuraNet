@@ -618,18 +618,60 @@
             list.appendChild(item);
         }
 
-        function saveSession() {
-            alert('Session saved successfully!');
+        async function saveSession() {
+            try {
+                const sessionData = {
+                    chief_complaint: document.getElementById('chiefComplaint').value,
+                    session_notes: document.getElementById('sessionNotes').value
+                };
+                
+                const response = await fetch(`/medical-sessions/${currentSessionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(sessionData)
+                });
+                
+                if (response.ok) {
+                    alert('Session saved successfully!');
+                } else {
+                    throw new Error('Failed to save session');
+                }
+            } catch (error) {
+                console.error('Error saving session:', error);
+                alert('Failed to save session');
+            }
         }
 
         function scheduleFollowUp() {
             alert('Follow-up scheduling feature coming soon!');
         }
 
-        function completeSession() {
+        async function completeSession() {
             if (confirm('Are you sure you want to complete this session?')) {
-                alert('Session completed successfully!');
-                window.location.href = 'doctor-dashboard.html';
+                try {
+                    // Save session first
+                    await saveSession();
+                    
+                    // Complete the session
+                    const response = await fetch(`/medical-sessions/${currentSessionId}/complete`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        alert('Session completed successfully!');
+                        window.location.href = 'doctor-dashboard.html';
+                    } else {
+                        throw new Error('Failed to complete session');
+                    }
+                } catch (error) {
+                    console.error('Error completing session:', error);
+                    alert('Failed to complete session');
+                }
             }
         }
 
@@ -659,9 +701,69 @@
         });
 
         async function loadSessionData() {
-            // This would normally load from the API
-            // For demo purposes, using static data
-            document.getElementById('sessionId').textContent = `S${currentSessionId}`;
+            try {
+                const response = await fetch(`/medical-sessions/${currentSessionId}`);
+                if (response.ok) {
+                    const sessionData = await response.json();
+                    
+                    // Update session info
+                    document.getElementById('sessionId').textContent = `S${sessionData.session_id}`;
+                    document.getElementById('patientName').textContent = sessionData.patient_name;
+                    document.getElementById('patientId').textContent = `P${sessionData.patient_id}`;
+                    document.getElementById('sessionStatus').textContent = sessionData.status;
+                    
+                    // Load existing data
+                    if (sessionData.vital_signs.length > 0) {
+                        const latest = sessionData.vital_signs[sessionData.vital_signs.length - 1];
+                        updateVitalSigns({
+                            blood_pressure_systolic: latest.blood_pressure ? latest.blood_pressure.split('/')[0] : null,
+                            blood_pressure_diastolic: latest.blood_pressure ? latest.blood_pressure.split('/')[1] : null,
+                            heart_rate: latest.heart_rate,
+                            temperature: latest.temperature,
+                            oxygen_saturation: latest.oxygen_saturation
+                        });
+                    }
+                    
+                    // Load symptoms
+                    if (sessionData.symptoms.length > 0) {
+                        const symptomsList = document.getElementById('symptomsList');
+                        symptomsList.innerHTML = '';
+                        sessionData.symptoms.forEach(symptom => {
+                            addSymptomToList({
+                                symptom_description: symptom.description,
+                                severity: symptom.severity,
+                                duration: symptom.duration
+                            });
+                        });
+                    }
+                    
+                    // Load prescriptions
+                    if (sessionData.prescriptions.length > 0) {
+                        const prescriptionsList = document.getElementById('prescriptionsList');
+                        prescriptionsList.innerHTML = '';
+                        sessionData.prescriptions.forEach(prescription => {
+                            addPrescriptionToList({
+                                medication_name: prescription.medication_name,
+                                dosage: prescription.dosage,
+                                frequency: prescription.frequency,
+                                duration: prescription.duration,
+                                instructions: prescription.instructions
+                            });
+                        });
+                    }
+                    
+                    // Load session notes
+                    document.getElementById('chiefComplaint').value = sessionData.chief_complaint || '';
+                    document.getElementById('sessionNotes').value = sessionData.session_notes || '';
+                    
+                } else {
+                    console.error('Failed to load session data');
+                    document.getElementById('sessionId').textContent = `S${currentSessionId}`;
+                }
+            } catch (error) {
+                console.error('Error loading session data:', error);
+                document.getElementById('sessionId').textContent = `S${currentSessionId}`;
+            }
         }
 
         // Close modals when clicking outside

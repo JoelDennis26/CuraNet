@@ -411,6 +411,7 @@
           <li><a href="doctor-profile.html">Profile</a></li>
           <li><a href="doctor-appointments.html">My Appointments</a></li>
           <li><a href="doctor-patients.html">My Patients</a></li>
+          <li><a href="doctor-session-management.html">Medical Sessions</a></li>
           <li><a href="/">Logout</a></li>
         </ul>
       </aside>
@@ -445,6 +446,15 @@
             </div>
             <div class="card-body">
               <h2>3</h2>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Active Sessions</h3>
+            </div>
+            <div class="card-body">
+              <h2 id="activeSessionsCount">0</h2>
             </div>
           </div>
         </div>
@@ -598,6 +608,11 @@
                         <td><span class="status-badge status-${appointment.status.toLowerCase()}">${appointment.status}</span></td>
                         <td>
                             <button class="btn-secondary" onclick="openUpdateModal('${appointment.appointment_id}', '${appointment.date_time}')">Update</button>
+                            ${appointment.status.toLowerCase() === 'confirmed' ? 
+                                `<button class="btn-primary" onclick="startSession('${appointment.appointment_id}')">Start Session</button>` : 
+                                appointment.status.toLowerCase() === 'in_progress' ? 
+                                `<button class="btn-success" onclick="continueSession('${appointment.appointment_id}')">Continue</button>` : 
+                                ''}
                         </td>
                     `;
                     tableBody.appendChild(row);
@@ -677,6 +692,50 @@
             closeModal();
         }
     });
+
+    // Medical Session Functions
+    async function startSession(appointmentId) {
+        try {
+            const response = await fetch(`/appointments/${appointmentId}/start-session`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to start session');
+            }
+
+            const data = await response.json();
+            window.location.href = `doctor-session-management.html?session=${data.session_id}&appointment=${appointmentId}`;
+        } catch (error) {
+            console.error('Error starting session:', error);
+            alert('Failed to start medical session');
+        }
+    }
+
+    async function continueSession(appointmentId) {
+        try {
+            // Get existing session for this appointment
+            const response = await fetch(`/appointments/${appointmentId}/start-session`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get session');
+            }
+
+            const data = await response.json();
+            window.location.href = `doctor-session-management.html?session=${data.session_id}&appointment=${appointmentId}`;
+        } catch (error) {
+            console.error('Error continuing session:', error);
+            alert('Failed to continue medical session');
+        }
+    }
 
     // Add loadAppointments to the DOMContentLoaded event listener
     document.addEventListener("DOMContentLoaded", () => {
