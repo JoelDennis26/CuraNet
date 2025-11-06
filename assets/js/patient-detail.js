@@ -94,7 +94,9 @@ class PatientDetailManager {
   // Load patient details from API
   async loadPatientDetails() {
     try {
-      const response = await fetch(`/api/patient/${this.patientId}`);
+      // Extract numeric ID from patient ID (remove 'P' prefix if present)
+      const numericId = this.patientId.toString().replace(/^P/, '');
+      const response = await fetch(`/api/patient/${numericId}`);
       
       if (!response.ok) {
         // If the specific API doesn't exist, try to get basic patient info
@@ -121,7 +123,12 @@ class PatientDetailManager {
       
       if (response.ok) {
         const patients = await response.json();
-        const patient = patients.find(p => p.patient_id == this.patientId || p.id == this.patientId);
+        const numericId = this.patientId.toString().replace(/^P/, '');
+        const patient = patients.find(p => 
+          p.patient_id == this.patientId || 
+          p.patient_id == `P${numericId}` || 
+          p.id == numericId
+        );
         
         if (patient) {
           // Create enhanced patient data with demo information
