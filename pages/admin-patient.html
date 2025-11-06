@@ -581,6 +581,7 @@
               <td>${patient.email}</td>
               <td>${patient.phone}</td>
               <td>
+                <button class="btn-secondary" onclick="viewPatientDetails('${patient.patient_id}')">View Details</button>
                 <button class="btn-primary" onclick="editPatient('${patient.patient_id}')">Edit</button>
                 <button class="btn-danger" onclick="removePatient('${patient.patient_id}')">Remove</button>
               </td>
@@ -752,6 +753,12 @@
           event.target.style.display = "none";
         }
       };
+
+      // Function to view patient details
+      function viewPatientDetails(patientId) {
+        const numericId = patientId.replace("P", "");
+        window.location.href = `patient-detail.html?id=${numericId}`;
+      }
 
       // Initialize
       document.addEventListener("DOMContentLoaded", () => {
