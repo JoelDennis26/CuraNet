@@ -186,6 +186,122 @@ def get_doctor_patients(username: str, db: Session = Depends(get_db)):
     patients = doctor_patients.get_doctor_patients(db, doctor.id)
     return doctor_patients.format_patients_response(patients)
 
+# Patient dashboard header info
+@app.get("/patient/dashboard-info/{username}", response_model=schemas.DashboardResponse)
+def get_patient_dashboard_info(username: str, db: Session = Depends(get_db)):
+    patient = patient_dashboard.get_patient_dashboard_info(db, username)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    recent_appointments = patient_dashboard.get_recent_appointments(db, patient.id)
+    return patient_dashboard.format_dashboard_response(patient, recent_appointments)
+
+# Admin dashboard header info
+@app.get("/admin/dashboard-info/{admin_id}", response_model=schemas.AdminHeaderResponse)
+def get_admin_dashboard_info(admin_id: int, db: Session = Depends(get_db)):
+    admin = admin_dashboard_header.get_admin_header_info(db, admin_id)
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    return admin
+
+# Get recent doctors list
+@app.get("/admin/recent-doctors")
+def get_recent_doctors_endpoint(db: Session = Depends(get_db)):
+    return admin_dashboard.get_recent_doctors(db)
+
+# Get all doctors list
+@app.get("/admin/doctors-list")
+def get_all_doctors_list_endpoint(db: Session = Depends(get_db)):
+    return admin_doctors.get_all_doctors_list(db)
+
+@app.get("/admin/doctor/{doctor_id}")
+def get_doctor_endpoint(doctor_id: int, db: Session = Depends(get_db)):
+    doctor = doctors.get_doctor(db, doctor_id)
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+    return doctor
+
+# Update doctor information
+@app.put("/admin/doctor/{doctor_id}", response_model=schemas.DoctorResponse)
+def update_doctor_endpoint(
+    doctor_id: int, doctor_data: schemas.DoctorCreate, db: Session = Depends(get_db)
+):
+    return admin_dashboard.edit_doctor(db, doctor_id, doctor_data)
+
+# Delete doctor
+@app.delete("/admin/doctor/{doctor_id}")
+def remove_doctor_endpoint(doctor_id: int, db: Session = Depends(get_db)):
+    return admin_dashboard.remove_doctor(db, doctor_id)
+
+# Get all patients list
+@app.get("/admin/patients-list")
+def get_all_patients_list_endpoint(db: Session = Depends(get_db)):
+    return admin_patients.get_all_patients_list(db)
+
+# Get specific patient details
+@app.get("/admin/patient/{patient_id}")
+def get_patient_endpoint(patient_id: int, db: Session = Depends(get_db)):
+    patient = admin_patients.get_patient_by_id(db, patient_id)
+    if patient is None:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return patient
+
+# Update patient details
+@app.put("/admin/patient/{patient_id}", response_model=schemas.PatientResponse)
+def update_patient_endpoint(
+    patient_id: int, patient_data: schemas.PatientCreate, db: Session = Depends(get_db)
+):
+    patient = admin_patients.edit_patient(db, patient_id, patient_data)
+    if patient is None:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return patient
+
+# Remove patient
+@app.delete("/admin/patient/{patient_id}")
+def remove_patient_endpoint(patient_id: int, db: Session = Depends(get_db)):
+    result = admin_patients.remove_patient(db, patient_id)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+@app.get("/admin/appointments-list", response_model=List[AdminAppointmentResponse])
+def get_all_appointments_endpoint(db: Session = Depends(get_db)):
+    return admin_appointments.get_all_appointments(db)
+
+@app.get("/admin/appointment/{appointment_id}", response_model=AdminAppointmentResponse)
+def get_appointment_endpoint(appointment_id: int, db: Session = Depends(get_db)):
+    appointment = admin_appointments.get_appointment_by_id(db, appointment_id)
+    if appointment is None:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    return appointment
+
+@app.post("/admin/appointment")
+def create_appointment_endpoint(appointment: AppointmentCreate, db: Session = Depends(get_db)):
+    try:
+        return admin_appointments.create_appointment(db, appointment)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/admin/appointment/{appointment_id}", response_model=AdminAppointmentResponse)
+def update_appointment_endpoint(
+    appointment_id: int, appointment_data: AppointmentUpdate, db: Session = Depends(get_db)
+):
+    appointment = admin_appointments.edit_appointment(db, appointment_id, appointment_data)
+    if appointment is None:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    return appointment
+
+@app.delete("/admin/appointment/{appointment_id}")
+def remove_appointment_endpoint(appointment_id: int, db: Session = Depends(get_db)):
+    result = admin_appointments.remove_appointment(db, appointment_id)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+@app.get("/admin/available-doctors/{appointment_time}")
+def get_available_doctors_endpoint(appointment_time: datetime, db: Session = Depends(get_db)):
+    return admin_appointments.get_available_doctors(db, appointment_time)
+
 @app.get("/api/patient/{patient_id}")
 def get_patient_detail(patient_id: int, db: Session = Depends(get_db)):
     patient_data = patient_detail.get_patient_detail(db, patient_id)
@@ -260,75 +376,3 @@ def get_doctor_active_sessions(doctor_id: int, db: Session = Depends(get_db)):
         for session in sessions
     ]
 
-# Patient appointment booking endpoints
-@app.get("/patient/available-doctors")
-def get_available_doctors_for_patient(db: Session = Depends(get_db)):
-    from . import models
-    doctors = db.query(models.Doctor).all()
-    return [{
-        "id": doctor.id,
-        "name": doctor.name,
-        "department": doctor.department,
-        "email": doctor.email
-    } for doctor in doctors]
-
-@app.get("/patient/available-slots/{doctor_id}")
-def get_available_time_slots(doctor_id: int, date: str, db: Session = Depends(get_db)):
-    from . import models
-    from datetime import datetime, timedelta
-    
-    # Parse the date
-    try:
-        selected_date = datetime.strptime(date, "%Y-%m-%d").date()
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-    
-    # Get existing appointments for the doctor on that date
-    existing_appointments = db.query(models.Appointment).filter(
-        models.Appointment.doctor_id == doctor_id,
-        models.Appointment.appointment_time >= selected_date,
-        models.Appointment.appointment_time < selected_date + timedelta(days=1)
-    ).all()
-    
-    # Generate available time slots (9 AM to 5 PM, 1-hour intervals)
-    available_slots = []
-    start_hour = 9
-    end_hour = 17
-    
-    for hour in range(start_hour, end_hour):
-        slot_time = datetime.combine(selected_date, datetime.min.time().replace(hour=hour))
-        
-        # Check if this slot is already booked
-        is_booked = any(
-            appointment.appointment_time.replace(second=0, microsecond=0) == slot_time
-            for appointment in existing_appointments
-        )
-        
-        if not is_booked:
-            available_slots.append({
-                "time": slot_time.strftime("%H:%M"),
-                "datetime": slot_time.strftime("%Y-%m-%d %H:%M:%S")
-            })
-    
-    return available_slots
-
-@app.post("/patient/book-appointment")
-def book_patient_appointment(appointment_data: dict, db: Session = Depends(get_db)):
-    from . import models
-    
-    try:
-        appointment = models.Appointment(
-            patient_id=appointment_data["patient_id"],
-            doctor_id=appointment_data["doctor_id"],
-            appointment_time=datetime.strptime(appointment_data["appointment_time"], "%Y-%m-%d %H:%M:%S"),
-            status="pending"
-        )
-        
-        db.add(appointment)
-        db.commit()
-        db.refresh(appointment)
-        
-        return {"message": "Appointment booked successfully", "appointment_id": appointment.id}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
