@@ -411,7 +411,7 @@
           <li><a href="doctor-profile.html">Profile</a></li>
           <li><a href="doctor-appointments.html">My Appointments</a></li>
           <li><a href="doctor-patients.html">My Patients</a></li>
-          <li><a href="doctor-session-management.html">Medical Sessions</a></li>
+          <li><a href="doctor-active-sessions.html">Active Sessions</a></li>
           <li><a href="/">Logout</a></li>
         </ul>
       </aside>
@@ -737,10 +737,37 @@
         }
     }
 
+    // Load active sessions count
+    async function loadActiveSessionsCount() {
+        try {
+            const username = localStorage.getItem("username");
+            if (!username) return;
+            
+            // Get doctor ID first
+            const doctorResponse = await fetch(`/doctor/dashboard-info/${username}`);
+            if (!doctorResponse.ok) return;
+            
+            const doctorData = await doctorResponse.json();
+            const doctorId = doctorData.doctor_id.replace('D', ''); // Remove 'D' prefix
+            
+            const response = await fetch(`/doctor/${doctorId}/active-sessions`);
+            if (response.ok) {
+                const sessions = await response.json();
+                document.getElementById('activeSessionsCount').textContent = sessions.length;
+            }
+        } catch (error) {
+            console.error('Error loading active sessions count:', error);
+        }
+    }
+
     // Add loadAppointments to the DOMContentLoaded event listener
     document.addEventListener("DOMContentLoaded", () => {
         loadDashboardInfo(); // Your existing function
         loadAppointments(); // New function
+        loadActiveSessionsCount(); // New function
+        
+        // Auto-refresh active sessions count every 30 seconds
+        setInterval(loadActiveSessionsCount, 30000);
     });
   </script>
     </script>

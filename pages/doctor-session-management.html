@@ -675,19 +675,52 @@
             }
         }
 
-        function loadMedicalHistory() {
-            document.getElementById('medicalHistory').innerHTML = `
-                <div class="list-item">
-                    <strong>2025-01-10 - Dr. Smith (Cardiology)</strong><br>
-                    Diagnosis: Hypertension<br>
-                    Prescription: Lisinopril 10mg daily
-                </div>
-                <div class="list-item">
-                    <strong>2024-12-15 - Dr. Johnson (General)</strong><br>
-                    Diagnosis: Upper respiratory infection<br>
-                    Prescription: Amoxicillin 500mg 3x daily for 7 days
-                </div>
-            `;
+        async function loadMedicalHistory() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const appointmentId = urlParams.get('appointment');
+                
+                if (!appointmentId) {
+                    document.getElementById('medicalHistory').innerHTML = '<p>No appointment ID provided</p>';
+                    return;
+                }
+                
+                // Get patient ID from current session
+                const sessionResponse = await fetch(`/medical-sessions/${currentSessionId}`);
+                if (!sessionResponse.ok) {
+                    throw new Error('Failed to get session info');
+                }
+                
+                const sessionData = await sessionResponse.json();
+                const patientId = sessionData.patient_id;
+                
+                // Load patient medical history
+                const historyResponse = await fetch(`/patient/${patientId}/medical-history`);
+                if (historyResponse.ok) {
+                    const history = await historyResponse.json();
+                    
+                    if (history.length === 0) {
+                        document.getElementById('medicalHistory').innerHTML = '<p>No previous medical sessions found.</p>';
+                        return;
+                    }
+                    
+                    document.getElementById('medicalHistory').innerHTML = history.map(session => `
+                        <div class="list-item">
+                            <strong>${new Date(session.session_date).toLocaleDateString()} - ${session.doctor_name}</strong><br>
+                            <strong>Chief Complaint:</strong> ${session.chief_complaint || 'Not recorded'}<br>
+                            <strong>Status:</strong> ${session.status}<br>
+                            ${session.diagnoses.length > 0 ? `<strong>Diagnoses:</strong> ${session.diagnoses.map(d => d.description).join(', ')}<br>` : ''}
+                            ${session.prescriptions.length > 0 ? `<strong>Prescriptions:</strong> ${session.prescriptions.map(p => `${p.medication_name} ${p.dosage}`).join(', ')}<br>` : ''}
+                            ${session.session_notes ? `<strong>Notes:</strong> ${session.session_notes}` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('medicalHistory').innerHTML = '<p>Unable to load medical history.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading medical history:', error);
+                document.getElementById('medicalHistory').innerHTML = '<p>Error loading medical history.</p>';
+            }
         }
 
         // Initialize page
