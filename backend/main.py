@@ -31,6 +31,7 @@ from .crud import (
     doctor_appointments,
     doctor_patients,
     patient_detail,
+    medical_sessions,
 )
 from .schemas import AdminAppointmentResponse, AppointmentCreate, AppointmentUpdate
 
