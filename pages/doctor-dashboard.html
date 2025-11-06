@@ -626,10 +626,10 @@
                         </td>
                         <td>
                             <button class="btn-secondary" onclick="openUpdateModal('${appointment.appointment_id}', '${appointment.date_time}')">Update</button>
-                            ${appointment.status.toLowerCase() === 'pending' || appointment.status.toLowerCase() === 'confirmed' ? 
-                                `<button class="btn-primary" onclick="startSession('${appointment.appointment_id.replace('A', '')}')">Start Session</button>` : 
-                                appointment.status.toLowerCase() === 'in_progress' ? 
-                                `<button class="btn-success" onclick="continueSession('${appointment.appointment_id.replace('A', '')}')">Continue</button>` : 
+                            ${appointment.status.toLowerCase() !== 'completed' && appointment.status.toLowerCase() !== 'cancelled' ? 
+                                (appointment.status.toLowerCase() === 'in_progress' ? 
+                                    `<button class="btn-success" onclick="continueSession('${appointment.appointment_id.replace('A', '')}')">Continue</button>` : 
+                                    `<button class="btn-primary" onclick="startSession('${appointment.appointment_id.replace('A', '')}')">Start Session</button>`) : 
                                 ''}
                         </td>
                     `;
