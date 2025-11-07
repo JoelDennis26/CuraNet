@@ -376,21 +376,7 @@ def remove_appointment_endpoint(appointment_id: int, db: Session = Depends(get_d
 def get_available_doctors_endpoint(appointment_time: datetime, db: Session = Depends(get_db)):
     return admin_appointments.get_available_doctors(db, appointment_time)
 
-@app.get("/patient/profile/{username}")
-def get_patient_profile(username: str, db: Session = Depends(get_db)):
-    patient = patient_profiles.get_patient_profile(db, username)
-    if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
-    return patient_profiles.format_profile_response(patient)
-
-@app.get("/patient/medical-history/{username}")
-def get_patient_medical_history(username: str, db: Session = Depends(get_db)):
-    patient = patient_medical_history.get_patient_by_name(db, username)
-    if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
-    
-    appointments = patient_medical_history.get_patient_medical_history(db, patient.id)
-    return patient_medical_history.format_medical_history_response(patient, appointments)
+# Removed duplicate endpoints - keeping the ones below
 
 @app.get("/api/patient/{patient_id}")
 def get_patient_detail(patient_id: int, db: Session = Depends(get_db)):
