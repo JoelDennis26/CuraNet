@@ -233,6 +233,47 @@ def update_doctor_endpoint(
 def remove_doctor_endpoint(doctor_id: int, db: Session = Depends(get_db)):
     return admin_dashboard.remove_doctor(db, doctor_id)
 
+# Get doctor availability for a specific date
+@app.get("/doctor/availability/{doctor_id}")
+def get_doctor_availability(doctor_id: int, date: str, db: Session = Depends(get_db)):
+    try:
+        from datetime import datetime
+        from . import models
+        
+        # Parse the date
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        
+        # Get existing appointments for this doctor on this date
+        from sqlalchemy import func, Date
+        existing_appointments = db.query(models.Appointment).filter(
+            models.Appointment.doctor_id == doctor_id,
+            func.date(models.Appointment.appointment_time) == target_date
+        ).all()
+        
+        # Extract booked time slots
+        booked_slots = []
+        for apt in existing_appointments:
+            time_str = apt.appointment_time.strftime("%H:%M")
+            booked_slots.append(time_str)
+        
+        # Define all available time slots
+        all_slots = [
+            "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+            "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
+        ]
+        
+        # Return available slots (not booked)
+        available_slots = [slot for slot in all_slots if slot not in booked_slots]
+        
+        return {
+            "date": date,
+            "doctor_id": doctor_id,
+            "available_slots": available_slots,
+            "booked_slots": booked_slots
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # Patient endpoints
 @app.get("/patient/profile/{username}")
 def get_patient_profile(username: str, db: Session = Depends(get_db)):
