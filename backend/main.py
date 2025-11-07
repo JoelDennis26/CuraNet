@@ -233,6 +233,39 @@ def update_doctor_endpoint(
 def remove_doctor_endpoint(doctor_id: int, db: Session = Depends(get_db)):
     return admin_dashboard.remove_doctor(db, doctor_id)
 
+# Patient endpoints
+@app.get("/patient/profile/{username}")
+def get_patient_profile(username: str, db: Session = Depends(get_db)):
+    patient = patient_profiles.get_patient_profile(db, username)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return patient_profiles.format_profile_response(patient)
+
+@app.get("/patient/medical-history/{username}")
+def get_medical_history(username: str, db: Session = Depends(get_db)):
+    patient = patient_medical_history.get_patient_medical_history_info(db, username)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    appointments = patient_medical_history.get_patient_appointments(db, patient.id)
+    return patient_medical_history.format_medical_history_response(patient, appointments)
+
+# Doctor list endpoint
+@app.get("/api/doctors", response_model=List[schemas.DoctorResponse])
+async def read_doctors(
+    department: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    if department:
+        return doctors.get_doctors_by_department(db, department)
+    elif search:
+        return doctors.search_doctors(db, search)
+    return doctors.get_doctors(db, skip=0, limit=100)
+
+@app.get("/api/departments", response_model=List[str])
+async def get_departments(db: Session = Depends(get_db)):
+    return doctors.get_all_departments(db)
+
 # Get all patients list
 @app.get("/admin/patients-list")
 def get_all_patients_list_endpoint(db: Session = Depends(get_db)):
