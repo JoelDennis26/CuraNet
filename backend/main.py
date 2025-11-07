@@ -399,6 +399,16 @@ def get_patient_detail(patient_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Patient not found")
     return patient_data
 
+@app.get("/patient/{patient_id}/medical-history")
+def get_patient_medical_history_by_id(patient_id: int, db: Session = Depends(get_db)):
+    from . import models
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    appointments = patient_medical_history.get_patient_medical_history(db, patient.id)
+    return patient_medical_history.format_medical_history_response(patient, appointments)
+
 # Medical Session Endpoints
 @app.post("/appointments/{appointment_id}/start-session")
 def start_medical_session(appointment_id: int, db: Session = Depends(get_db)):
@@ -430,6 +440,17 @@ def get_medical_session(session_id: int, db: Session = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Medical session not found")
     return medical_sessions.format_medical_session_response(session, db)
+
+@app.put("/medical-sessions/{session_id}")
+def update_medical_session(
+    session_id: int,
+    session_data: schemas.MedicalSessionUpdate,
+    db: Session = Depends(get_db)
+):
+    session = medical_sessions.update_medical_session(db, session_id, session_data)
+    if not session:
+        raise HTTPException(status_code=404, detail="Medical session not found")
+    return {"message": "Medical session updated successfully"}
 
 @app.post("/medical-sessions/{session_id}/vital-signs")
 def add_vital_signs(
