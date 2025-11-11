@@ -220,15 +220,39 @@
         background-color: var(--warning-color);
         color: var(--bg-primary);
       }
+      
+      .status-confirmed {
+        background-color: var(--primary-color);
+        color: white;
+      }
+      
+      .status-in-progress {
+        background-color: var(--success-color);
+        color: white;
+      }
+      
+      .status-completed {
+        background-color: var(--text-secondary);
+        color: white;
+      }
+      
+      .status-cancelled {
+        background-color: var(--danger-color);
+        color: white;
+      }
 
       .btn-primary,
-      .btn-secondary {
+      .btn-secondary,
+      .btn-success,
+      .btn-warning {
         padding: 0.5rem 1rem;
         border-radius: 6px;
         border: none;
         font-weight: 600;
         cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
+        margin-right: 0.5rem;
+        font-size: 0.9rem;
       }
 
       .btn-primary {
@@ -245,6 +269,11 @@
       .btn-success {
         background: var(--success-color);
         color: white;
+      }
+      
+      .btn-warning {
+        background: var(--warning-color);
+        color: var(--bg-primary);
       }
 
       .modal {
@@ -634,7 +663,7 @@
                             <button class="btn-secondary" onclick="saveStatusChange('${appointment.appointment_id.replace('A', '')}')">Save Status</button>
                             ${appointment.status.toLowerCase() !== 'completed' && appointment.status.toLowerCase() !== 'cancelled' ? 
                                 (appointment.status.toLowerCase() === 'in_progress' ? 
-                                    `<button class="btn-primary" onclick="continueSession('${appointment.appointment_id.replace('A', '')}')">Continue</button>` : 
+                                    `<button class="btn-warning" onclick="continueSession('${appointment.appointment_id.replace('A', '')}')">Continue Session</button>` : 
                                     `<button class="btn-primary" onclick="startSession('${appointment.appointment_id.replace('A', '')}')">Start Session</button>`) : 
                                 ''}
                         </td>
