@@ -417,14 +417,37 @@ def get_patient_medical_history_by_id(patient_id: str, db: Session = Depends(get
         for session in sessions:
             doctor = db.query(models.Doctor).filter(models.Doctor.id == session.doctor_id).first()
             
+            # Get prescriptions for this session
+            prescriptions = db.query(models.Prescription).filter(
+                models.Prescription.session_id == session.session_id
+            ).all()
+            
+            # Get diagnoses for this session (if diagnosis table exists)
+            diagnoses = []
+            try:
+                diagnoses = db.query(models.Diagnosis).filter(
+                    models.Diagnosis.session_id == session.session_id
+                ).all()
+            except:
+                pass  # Diagnosis table might not exist
+            
             history.append({
                 "session_id": session.session_id,
                 "session_date": session.session_date.isoformat(),
                 "doctor_name": doctor.name if doctor else "Unknown Doctor",
                 "doctor_department": doctor.department if doctor else "Unknown",
-                "chief_complaint": session.chief_complaint,
-                "session_notes": session.session_notes,
-                "status": session.status
+                "chief_complaint": session.chief_complaint or "Not recorded",
+                "session_notes": session.session_notes or "",
+                "status": session.status,
+                "prescriptions": [{
+                    "medication_name": p.medication_name,
+                    "dosage": p.dosage,
+                    "frequency": p.frequency,
+                    "duration": p.duration
+                } for p in prescriptions],
+                "diagnoses": [{
+                    "description": d.diagnosis_description
+                } for d in diagnoses]
             })
         
         return history
@@ -518,7 +541,7 @@ def get_doctor_active_sessions(doctor_id: int, db: Session = Depends(get_db)):
         for session in sessions
     ]
 
-@app.get("/patient/{patient_id}/complete-history")
+@app.get("/patient/{patient_id}/full-history")
 def get_patient_complete_history(patient_id: str, db: Session = Depends(get_db)):
     from . import models
     
