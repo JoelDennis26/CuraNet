@@ -377,6 +377,153 @@ def remove_appointment_endpoint(appointment_id: int, db: Session = Depends(get_d
 def get_available_doctors_endpoint(appointment_time: datetime, db: Session = Depends(get_db)):
     return admin_appointments.get_available_doctors(db, appointment_time)
 
+# Admin patient medical history access
+@app.get("/admin/patient/{patient_id}/medical-history")
+def get_admin_patient_medical_history(patient_id: int, db: Session = Depends(get_db)):
+    from . import models
+    
+    # Get patient info
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Get all medical sessions for this patient
+    sessions = db.query(models.MedicalSession).filter(
+        models.MedicalSession.patient_id == patient_id
+    ).order_by(models.MedicalSession.session_date.desc()).all()
+    
+    # Get all appointments for this patient
+    appointments = db.query(models.Appointment).filter(
+        models.Appointment.patient_id == patient_id
+    ).order_by(models.Appointment.appointment_time.desc()).all()
+    
+    session_history = []
+    for session in sessions:
+        doctor = db.query(models.Doctor).filter(models.Doctor.id == session.doctor_id).first()
+        
+        # Get detailed session data
+        vital_signs = db.query(models.VitalSign).filter(
+            models.VitalSign.session_id == session.session_id
+        ).all()
+        
+        prescriptions = db.query(models.Prescription).filter(
+            models.Prescription.session_id == session.session_id
+        ).all()
+        
+        symptoms = db.query(models.Symptom).filter(
+            models.Symptom.session_id == session.session_id
+        ).all()
+        
+        session_history.append({
+            "session_id": session.session_id,
+            "session_date": session.session_date.isoformat(),
+            "doctor_name": doctor.name if doctor else "Unknown Doctor",
+            "doctor_department": doctor.department if doctor else "Unknown",
+            "chief_complaint": session.chief_complaint,
+            "session_notes": session.session_notes,
+            "status": session.status,
+            "vital_signs": [{
+                "blood_pressure": f"{vs.blood_pressure_systolic}/{vs.blood_pressure_diastolic}" if vs.blood_pressure_systolic and vs.blood_pressure_diastolic else None,
+                "heart_rate": vs.heart_rate,
+                "temperature": vs.temperature,
+                "weight": vs.weight,
+                "height": vs.height
+            } for vs in vital_signs],
+            "prescriptions": [{
+                "medication_name": p.medication_name,
+                "dosage": p.dosage,
+                "frequency": p.frequency,
+                "duration": p.duration,
+                "instructions": p.instructions
+            } for p in prescriptions],
+            "symptoms": [{
+                "description": s.symptom_description,
+                "severity": s.severity,
+                "duration": s.duration,
+                "notes": s.notes
+            } for s in symptoms]
+        })
+    
+    appointment_history = []
+    for appointment in appointments:
+        doctor = db.query(models.Doctor).filter(models.Doctor.id == appointment.doctor_id).first()
+        appointment_history.append({
+            "appointment_id": appointment.id,
+            "date_time": appointment.appointment_time.isoformat(),
+            "doctor_name": doctor.name if doctor else "Unknown Doctor",
+            "doctor_department": doctor.department if doctor else "Unknown",
+            "status": appointment.status
+        })
+    
+    return {
+        "patient_info": {
+            "id": patient.id,
+            "name": patient.name,
+            "age": patient.age,
+            "blood_group": patient.blood_group,
+            "email": patient.email,
+            "phone": patient.phone,
+            "medical_history": patient.medical_history
+        },
+        "appointments": appointment_history,
+        "medical_sessions": session_history,
+        "total_appointments": len(appointment_history),
+        "total_sessions": len(session_history)
+    }
+
+@app.get("/admin/patients/{patient_id}/summary")
+def get_admin_patient_summary(patient_id: int, db: Session = Depends(get_db)):
+    from . import models
+    from sqlalchemy import func
+    
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Get statistics
+    total_appointments = db.query(func.count(models.Appointment.id)).filter(
+        models.Appointment.patient_id == patient_id
+    ).scalar()
+    
+    total_sessions = db.query(func.count(models.MedicalSession.session_id)).filter(
+        models.MedicalSession.patient_id == patient_id
+    ).scalar()
+    
+    # Get unique doctors who treated this patient
+    doctors = db.query(models.Doctor).join(models.Appointment).filter(
+        models.Appointment.patient_id == patient_id
+    ).distinct().all()
+    
+    # Get recent prescriptions
+    recent_prescriptions = db.query(models.Prescription).join(models.MedicalSession).filter(
+        models.MedicalSession.patient_id == patient_id
+    ).order_by(models.MedicalSession.session_date.desc()).limit(5).all()
+    
+    return {
+        "patient_info": {
+            "id": patient.id,
+            "name": patient.name,
+            "age": patient.age,
+            "blood_group": patient.blood_group,
+            "email": patient.email,
+            "phone": patient.phone
+        },
+        "statistics": {
+            "total_appointments": total_appointments,
+            "total_sessions": total_sessions,
+            "doctors_consulted": len(doctors)
+        },
+        "doctors": [{
+            "name": doctor.name,
+            "department": doctor.department
+        } for doctor in doctors],
+        "recent_prescriptions": [{
+            "medication_name": p.medication_name,
+            "dosage": p.dosage,
+            "frequency": p.frequency
+        } for p in recent_prescriptions]
+    }
+
 # Removed duplicate endpoints - keeping the ones below
 
 @app.get("/api/patient/{patient_id}")
@@ -541,7 +688,7 @@ def get_doctor_active_sessions(doctor_id: int, db: Session = Depends(get_db)):
         for session in sessions
     ]
 
-@app.get("/patient/{patient_id}/full-history")
+@app.get("/patient/{patient_id}/complete-history")
 def get_patient_complete_history(patient_id: str, db: Session = Depends(get_db)):
     from . import models
     
