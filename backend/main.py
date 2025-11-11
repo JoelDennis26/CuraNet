@@ -283,11 +283,12 @@ def get_patient_profile(username: str, db: Session = Depends(get_db)):
     return patient_profiles.format_profile_response(patient)
 
 @app.get("/patient/medical-history/{username}")
-def get_medical_history(username: str, db: Session = Depends(get_db)):
-    patient = patient_medical_history.get_patient_medical_history_info(db, username)
+def get_patient_medical_history(username: str, db: Session = Depends(get_db)):
+    patient = patient_medical_history.get_patient_by_name(db, username)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    appointments = patient_medical_history.get_patient_appointments(db, patient.id)
+    
+    appointments = patient_medical_history.get_patient_medical_history(db, patient.id)
     return patient_medical_history.format_medical_history_response(patient, appointments)
 
 # Doctor list endpoint
@@ -379,22 +380,56 @@ def get_available_doctors_endpoint(appointment_time: datetime, db: Session = Dep
 # Removed duplicate endpoints - keeping the ones below
 
 @app.get("/api/patient/{patient_id}")
-def get_patient_detail(patient_id: int, db: Session = Depends(get_db)):
-    patient_data = patient_detail.get_patient_detail(db, patient_id)
-    if not patient_data:
-        raise HTTPException(status_code=404, detail="Patient not found")
-    return patient_data
+def get_patient_detail(patient_id: str, db: Session = Depends(get_db)):
+    try:
+        # Handle patient ID with 'P' prefix (e.g., 'P182553' -> 182553)
+        if patient_id.startswith('P'):
+            numeric_id = int(patient_id[1:])
+        else:
+            numeric_id = int(patient_id)
+        
+        patient_data = patient_detail.get_patient_detail(db, numeric_id)
+        if not patient_data:
+            raise HTTPException(status_code=404, detail="Patient not found")
+        return patient_data
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid patient ID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving patient details: {str(e)}")
 
 @app.get("/patient/{patient_id}/medical-history")
-def get_patient_medical_history_by_id(patient_id: int, db: Session = Depends(get_db)):
+def get_patient_medical_history_by_id(patient_id: str, db: Session = Depends(get_db)):
+    from . import models
+    
     try:
-        from . import models
-        patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
-        if not patient:
-            raise HTTPException(status_code=404, detail="Patient not found")
+        # Handle patient ID with 'P' prefix
+        if patient_id.startswith('P'):
+            numeric_id = int(patient_id[1:])
+        else:
+            numeric_id = int(patient_id)
         
-        appointments = patient_medical_history.get_patient_medical_history(db, patient.id)
-        return patient_medical_history.format_medical_history_response(patient, appointments)
+        # Get all medical sessions for this patient (cross-doctor access)
+        sessions = db.query(models.MedicalSession).filter(
+            models.MedicalSession.patient_id == numeric_id
+        ).order_by(models.MedicalSession.session_date.desc()).all()
+        
+        history = []
+        for session in sessions:
+            doctor = db.query(models.Doctor).filter(models.Doctor.id == session.doctor_id).first()
+            
+            history.append({
+                "session_id": session.session_id,
+                "session_date": session.session_date.isoformat(),
+                "doctor_name": doctor.name if doctor else "Unknown Doctor",
+                "doctor_department": doctor.department if doctor else "Unknown",
+                "chief_complaint": session.chief_complaint,
+                "session_notes": session.session_notes,
+                "status": session.status
+            })
+        
+        return history
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid patient ID format")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving medical history: {str(e)}")
 
@@ -482,4 +517,91 @@ def get_doctor_active_sessions(doctor_id: int, db: Session = Depends(get_db)):
         medical_sessions.format_medical_session_response(session, db)
         for session in sessions
     ]
+
+@app.get("/patient/{patient_id}/complete-history")
+def get_patient_complete_history(patient_id: str, db: Session = Depends(get_db)):
+    from . import models
+    
+    try:
+        # Handle patient ID with 'P' prefix
+        if patient_id.startswith('P'):
+            numeric_id = int(patient_id[1:])
+        else:
+            numeric_id = int(patient_id)
+        
+        # Get patient basic info
+        patient = db.query(models.Patient).filter(models.Patient.id == numeric_id).first()
+        if not patient:
+            raise HTTPException(status_code=404, detail="Patient not found")
+        
+        # Get all medical sessions for this patient (from any doctor)
+        sessions = db.query(models.MedicalSession).filter(
+            models.MedicalSession.patient_id == numeric_id
+        ).order_by(models.MedicalSession.session_date.desc()).all()
+        
+        session_history = []
+        for session in sessions:
+            doctor = db.query(models.Doctor).filter(models.Doctor.id == session.doctor_id).first()
+            
+            # Get vital signs for this session
+            vital_signs = db.query(models.VitalSign).filter(
+                models.VitalSign.session_id == session.session_id
+            ).all()
+            
+            # Get prescriptions for this session
+            prescriptions = db.query(models.Prescription).filter(
+                models.Prescription.session_id == session.session_id
+            ).all()
+            
+            # Get symptoms for this session
+            symptoms = db.query(models.Symptom).filter(
+                models.Symptom.session_id == session.session_id
+            ).all()
+            
+            session_history.append({
+                "session_id": session.session_id,
+                "session_date": session.session_date.isoformat(),
+                "doctor_name": doctor.name if doctor else "Unknown Doctor",
+                "doctor_department": doctor.department if doctor else "Unknown",
+                "chief_complaint": session.chief_complaint,
+                "session_notes": session.session_notes,
+                "status": session.status,
+                "vital_signs": [{
+                    "blood_pressure": f"{vs.blood_pressure_systolic}/{vs.blood_pressure_diastolic}" if vs.blood_pressure_systolic and vs.blood_pressure_diastolic else None,
+                    "heart_rate": vs.heart_rate,
+                    "temperature": vs.temperature,
+                    "weight": vs.weight,
+                    "height": vs.height
+                } for vs in vital_signs],
+                "prescriptions": [{
+                    "medication_name": p.medication_name,
+                    "dosage": p.dosage,
+                    "frequency": p.frequency,
+                    "duration": p.duration,
+                    "instructions": p.instructions
+                } for p in prescriptions],
+                "symptoms": [{
+                    "description": s.symptom_description,
+                    "severity": s.severity,
+                    "duration": s.duration,
+                    "notes": s.notes
+                } for s in symptoms]
+            })
+        
+        return {
+            "patient_info": {
+                "id": patient.id,
+                "name": patient.name,
+                "age": patient.age,
+                "blood_group": patient.blood_group,
+                "email": patient.email,
+                "phone": patient.phone,
+                "medical_history": patient.medical_history
+            },
+            "medical_sessions": session_history
+        }
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid patient ID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving complete history: {str(e)}")
 
