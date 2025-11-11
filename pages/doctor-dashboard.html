@@ -616,7 +616,7 @@
                         <td>${appointment.patient_id}</td>
                         <td>${appointment.patient_name}</td>
                         <td>
-                            <select class="status-select" onchange="quickStatusChange('${appointment.appointment_id.replace('A', '')}', this.value)">
+                            <select class="status-select" data-appointment-id="${appointment.appointment_id.replace('A', '')}">
                                 <option value="pending" ${appointment.status.toLowerCase() === 'pending' ? 'selected' : ''}>Pending</option>
                                 <option value="confirmed" ${appointment.status.toLowerCase() === 'confirmed' ? 'selected' : ''}>Confirmed</option>
                                 <option value="in_progress" ${appointment.status.toLowerCase() === 'in_progress' ? 'selected' : ''}>In Progress</option>
@@ -626,6 +626,7 @@
                         </td>
                         <td>
                             <button class="btn-secondary" onclick="openUpdateModal('${appointment.appointment_id}', '${appointment.date_time}')">Update</button>
+                            <button class="btn-secondary" onclick="saveStatusChange('${appointment.appointment_id.replace('A', '')}')">Save Status</button>
                             ${appointment.status.toLowerCase() !== 'completed' && appointment.status.toLowerCase() !== 'cancelled' ? 
                                 (appointment.status.toLowerCase() === 'in_progress' ? 
                                     `<button class="btn-success" onclick="continueSession('${appointment.appointment_id.replace('A', '')}')">Continue</button>` : 
@@ -713,8 +714,11 @@
         }
     });
 
-    // Quick status change function
-    async function quickStatusChange(appointmentId, newStatus) {
+    // Save status change function (only when Save Status button is clicked)
+    async function saveStatusChange(appointmentId) {
+        const statusSelect = document.querySelector(`select[data-appointment-id="${appointmentId}"]`);
+        const newStatus = statusSelect.value;
+        
         try {
             const response = await fetch(`/doctor/appointment/${appointmentId}`, {
                 method: 'PUT',
@@ -730,11 +734,11 @@
                 throw new Error('Failed to update status');
             }
 
+            alert('Appointment status updated successfully');
             loadAppointments(); // Reload the appointments table
         } catch (error) {
             console.error('Error updating status:', error);
             alert('Failed to update appointment status');
-            loadAppointments(); // Reload to reset dropdown
         }
     }
 
