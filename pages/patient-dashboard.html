@@ -222,6 +222,27 @@
         color: var(--bg-primary);
       }
 
+      .status-confirmed {
+        background-color: var(--primary-color);
+        color: white;
+      }
+
+      .status-in_progress,
+      .status-in-progress {
+        background-color: var(--success-color);
+        color: white;
+      }
+
+      .status-completed {
+        background-color: var(--text-secondary);
+        color: white;
+      }
+
+      .status-cancelled {
+        background-color: var(--danger-color);
+        color: white;
+      }
+
       .btn-primary,
       .btn-secondary {
         padding: 0.5rem 1rem;
@@ -539,7 +560,7 @@
                 <td>${appointment.appointment_id}</td>
                 <td>${appointment.date_time}</td>
                 <td>${appointment.doctor}</td>
-                <td>${appointment.status}</td>
+                <td><span class="status-badge status-${appointment.status.toLowerCase().replace(' ', '_')}">${appointment.status}</span></td>
               `;
               tableBody.appendChild(row);
             });
