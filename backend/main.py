@@ -96,35 +96,59 @@ def root():
 def api_root():
     return {"message": "CuraNet API is running"}
 
-@app.get("/test-s3")
-def test_s3_connection():
-    """Test S3 connection and configuration"""
+@app.get("/test-upload")
+def test_upload_simple():
+    """Test upload functionality with a simple file"""
     try:
-        # Test S3 service initialization
-        test_content = b"Test file content for S3 connection"
+        # Create a small test file
+        test_content = b"This is a test medical report file for testing upload functionality."
+        
+        # Test the upload process
         file_key = s3_service.upload_file(
-            test_content, "test.txt", "text/plain", 999, 999
+            test_content, "test_report.txt", "text/plain", 1, 1
         )
         
-        # Test presigned URL generation
-        download_url = s3_service.generate_presigned_url(file_key)
+        # Test database save
+        from .database import SessionLocal
+        db = SessionLocal()
         
-        # Clean up test file
-        s3_service.delete_file(file_key)
-        
-        return {
-            "status": "success",
-            "message": "S3 connection working",
-            "test_file_key": file_key,
-            "download_url_generated": bool(download_url),
-            "s3_service_type": type(s3_service).__name__
-        }
+        try:
+            report = models.MedicalReport(
+                patient_id=1,
+                doctor_id=1,
+                session_id=None,
+                report_name="test_report.txt",
+                file_key=file_key,
+                file_size=len(test_content),
+                content_type="text/plain",
+                shared_with="[]"
+            )
+            
+            db.add(report)
+            db.commit()
+            db.refresh(report)
+            
+            # Test download URL
+            download_url = s3_service.generate_presigned_url(file_key)
+            
+            return {
+                "status": "success",
+                "message": "Upload test successful",
+                "report_id": report.report_id,
+                "file_key": file_key,
+                "download_url": download_url,
+                "s3_service_type": type(s3_service).__name__
+            }
+            
+        finally:
+            db.close()
+            
     except Exception as e:
         return {
             "status": "error",
             "message": str(e),
             "s3_service_type": type(s3_service).__name__,
-            "aws_configured": bool(os.getenv('AWS_ACCESS_KEY_ID'))
+            "error_type": type(e).__name__
         }
 
 @app.post("/admin/setup-file-sharing")
