@@ -96,60 +96,7 @@ def root():
 def api_root():
     return {"message": "CuraNet API is running"}
 
-@app.get("/test-upload")
-def test_upload_simple():
-    """Test upload functionality with a simple file"""
-    try:
-        # Create a small test file
-        test_content = b"This is a test medical report file for testing upload functionality."
-        
-        # Test the upload process
-        file_key = s3_service.upload_file(
-            test_content, "test_report.txt", "text/plain", 1, 1
-        )
-        
-        # Test database save
-        from .database import SessionLocal
-        db = SessionLocal()
-        
-        try:
-            report = models.MedicalReport(
-                patient_id=1,
-                doctor_id=1,
-                session_id=None,
-                report_name="test_report.txt",
-                file_key=file_key,
-                file_size=len(test_content),
-                content_type="text/plain",
-                shared_with="[]"
-            )
-            
-            db.add(report)
-            db.commit()
-            db.refresh(report)
-            
-            # Test download URL
-            download_url = s3_service.generate_presigned_url(file_key)
-            
-            return {
-                "status": "success",
-                "message": "Upload test successful",
-                "report_id": report.report_id,
-                "file_key": file_key,
-                "download_url": download_url,
-                "s3_service_type": type(s3_service).__name__
-            }
-            
-        finally:
-            db.close()
-            
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e),
-            "s3_service_type": type(s3_service).__name__,
-            "error_type": type(e).__name__
-        }
+
 
 @app.get("/setup-db")
 def setup_database(db: Session = Depends(get_db)):
