@@ -151,11 +151,10 @@ def test_upload_simple():
             "error_type": type(e).__name__
         }
 
-@app.post("/admin/setup-file-sharing")
-def setup_file_sharing(db: Session = Depends(get_db)):
-    """Create medical_reports table if it doesn't exist"""
+@app.get("/setup-db")
+def setup_database(db: Session = Depends(get_db)):
+    """Create medical_reports table"""
     try:
-        # SQL to create medical_reports table
         sql = """
         CREATE TABLE IF NOT EXISTS medical_reports (
             report_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -167,19 +166,16 @@ def setup_file_sharing(db: Session = Depends(get_db)):
             file_size INT NOT NULL,
             content_type VARCHAR(100) NOT NULL,
             uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            shared_with TEXT,
-            
-            FOREIGN KEY (patient_id) REFERENCES patients(id),
-            FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+            shared_with TEXT
         )
         """
         
         db.execute(sql)
         db.commit()
         
-        return {"message": "File sharing table created successfully"}
+        return {"message": "medical_reports table created"}
     except Exception as e:
-        return {"error": f"Failed to create table: {str(e)}"}
+        return {"error": str(e)}
 
 @app.post("/patients/register", response_model=schemas.PatientResponse)
 def register_patient(patient: schemas.PatientCreate, db: Session = Depends(get_db)):
