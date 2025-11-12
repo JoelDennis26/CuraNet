@@ -91,6 +91,37 @@ def root():
 def api_root():
     return {"message": "CuraNet API is running"}
 
+@app.get("/test-s3")
+def test_s3_connection():
+    """Test S3 connection and configuration"""
+    try:
+        # Test S3 service initialization
+        test_content = b"Test file content for S3 connection"
+        file_key = s3_service.upload_file(
+            test_content, "test.txt", "text/plain", 999, 999
+        )
+        
+        # Test presigned URL generation
+        download_url = s3_service.generate_presigned_url(file_key)
+        
+        # Clean up test file
+        s3_service.delete_file(file_key)
+        
+        return {
+            "status": "success",
+            "message": "S3 connection working",
+            "test_file_key": file_key,
+            "download_url_generated": bool(download_url),
+            "s3_service_type": type(s3_service).__name__
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "s3_service_type": type(s3_service).__name__,
+            "aws_configured": bool(os.getenv('AWS_ACCESS_KEY_ID'))
+        }
+
 @app.post("/admin/setup-file-sharing")
 def setup_file_sharing(db: Session = Depends(get_db)):
     """Create medical_reports table if it doesn't exist"""
