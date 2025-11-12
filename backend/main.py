@@ -145,31 +145,17 @@ def test_upload_simple():
             "error_type": type(e).__name__
         }
 
-@app.get("/setup-db")
-def setup_database(db: Session = Depends(get_db)):
-    """Create medical_reports table"""
-    try:
-        sql = """
-        CREATE TABLE IF NOT EXISTS medical_reports (
-            report_id INT AUTO_INCREMENT PRIMARY KEY,
-            patient_id INT NOT NULL,
-            doctor_id INT NOT NULL,
-            session_id INT NULL,
-            report_name VARCHAR(255) NOT NULL,
-            file_key VARCHAR(500) NOT NULL,
-            file_size INT NOT NULL,
-            content_type VARCHAR(100) NOT NULL,
-            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            shared_with TEXT
-        )
-        """
-        
-        db.execute(sql)
-        db.commit()
-        
-        return {"message": "medical_reports table created"}
-    except Exception as e:
-        return {"error": str(e)}
+@app.get("/test-env")
+def test_environment():
+    """Test environment variables"""
+    import os
+    return {
+        "aws_key_set": bool(os.getenv('AWS_ACCESS_KEY_ID')),
+        "aws_secret_set": bool(os.getenv('AWS_SECRET_ACCESS_KEY')),
+        "aws_region": os.getenv('AWS_REGION'),
+        "s3_bucket": os.getenv('S3_BUCKET_NAME'),
+        "aws_key_prefix": os.getenv('AWS_ACCESS_KEY_ID', '')[:10] if os.getenv('AWS_ACCESS_KEY_ID') else 'NOT SET'
+    }
 
 @app.post("/patients/register", response_model=schemas.PatientResponse)
 def register_patient(patient: schemas.PatientCreate, db: Session = Depends(get_db)):
