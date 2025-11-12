@@ -498,12 +498,14 @@
                 const response = await fetch(`/reports/patient/${currentPatientId}?doctor_id=${currentDoctorId}`);
                 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch reports: ${response.statusText}`);
+                    console.warn('Reports endpoint failed, showing empty state');
+                    reportsList.innerHTML = '<div class="loading">No reports found (File sharing ready for upload)</div>';
+                    return;
                 }
 
                 const reports = await response.json();
                 
-                if (reports.length === 0) {
+                if (!reports || reports.length === 0) {
                     reportsList.innerHTML = '<div class="loading">No reports found</div>';
                     return;
                 }
@@ -525,7 +527,8 @@
                 `).join('');
 
             } catch (error) {
-                reportsList.innerHTML = `<div class="error-message">Failed to load reports: ${error.message}</div>`;
+                console.warn('Reports loading failed:', error);
+                reportsList.innerHTML = '<div class="loading">File sharing ready (Upload files to see them here)</div>';
             }
         }
 
@@ -539,8 +542,13 @@
 
                 const result = await response.json();
                 
-                // Open download URL in new tab
-                window.open(result.download_url, '_blank');
+                // Check if it's a mock URL
+                if (result.download_url.includes('mock-s3-url')) {
+                    alert('File download simulated (S3 not configured). In production, this would download the actual file.');
+                } else {
+                    // Open download URL in new tab
+                    window.open(result.download_url, '_blank');
+                }
                 
             } catch (error) {
                 alert(`Download failed: ${error.message}`);

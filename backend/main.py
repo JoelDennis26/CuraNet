@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Security, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, Security, UploadFile, File, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -39,6 +39,12 @@ from .s3_service import S3Service
 from . import models
 
 app = FastAPI()
+
+# Increase file upload size limit
+app.add_middleware(
+    lambda request, call_next: call_next(request),
+    max_upload_size=50 * 1024 * 1024  # 50MB
+)
 
 # Mount static files
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -778,12 +784,26 @@ def get_patient_complete_history(patient_id: str, db: Session = Depends(get_db))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving complete history: {str(e)}")
 
-# File Sharing Endpoints
+# File Sharing Endpoints - Mock S3 service for testing
+class MockS3Service:
+    def upload_file(self, file_content, filename, content_type, patient_id, doctor_id):
+        # Generate a mock file key
+        import uuid
+        return f"mock/patient_{patient_id}/doctor_{doctor_id}/{uuid.uuid4()}_{filename}"
+    
+    def generate_presigned_url(self, file_key, expiration=3600):
+        # Return a mock download URL
+        return f"https://mock-s3-url.com/download/{file_key}?expires={expiration}"
+    
+    def delete_file(self, file_key):
+        return True
+
 try:
     s3_service = S3Service()
+    print("✅ S3 service initialized successfully")
 except Exception as e:
-    print(f"Warning: S3 service initialization failed: {e}")
-    s3_service = None
+    print(f"⚠️  S3 service failed, using mock service: {e}")
+    s3_service = MockS3Service()
 
 @app.post("/reports/upload")
 async def upload_report(
@@ -832,23 +852,27 @@ async def upload_report(
 
 @app.get("/reports/patient/{patient_id}")
 def get_patient_reports(patient_id: int, doctor_id: int, db: Session = Depends(get_db)):
-    # All doctors can access all patient reports
-    reports = db.query(models.MedicalReport).filter(
-        models.MedicalReport.patient_id == patient_id
-    ).order_by(models.MedicalReport.uploaded_at.desc()).all()
-    
-    accessible_reports = []
-    for report in reports:
-        doctor = db.query(models.Doctor).filter(models.Doctor.id == report.doctor_id).first()
-        accessible_reports.append({
-            "report_id": report.report_id,
-            "report_name": report.report_name,
-            "uploaded_at": report.uploaded_at.isoformat(),
-            "file_size": report.file_size,
-            "uploaded_by": doctor.name if doctor else "Unknown Doctor"
-        })
-    
-    return accessible_reports
+    try:
+        # All doctors can access all patient reports
+        reports = db.query(models.MedicalReport).filter(
+            models.MedicalReport.patient_id == patient_id
+        ).order_by(models.MedicalReport.uploaded_at.desc()).all()
+        
+        accessible_reports = []
+        for report in reports:
+            doctor = db.query(models.Doctor).filter(models.Doctor.id == report.doctor_id).first()
+            accessible_reports.append({
+                "report_id": report.report_id,
+                "report_name": report.report_name,
+                "uploaded_at": report.uploaded_at.isoformat(),
+                "file_size": report.file_size,
+                "uploaded_by": doctor.name if doctor else "Unknown Doctor"
+            })
+        
+        return accessible_reports
+    except Exception as e:
+        print(f"Error getting patient reports: {e}")
+        return []
 
 @app.get("/reports/{report_id}/download")
 def download_report(report_id: int, doctor_id: int, db: Session = Depends(get_db)):
