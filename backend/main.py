@@ -624,13 +624,24 @@ def get_patient_detail(patient_id: str, db: Session = Depends(get_db)):
         else:
             numeric_id = int(patient_id)
         
-        patient_data = patient_detail.get_patient_detail(db, numeric_id)
-        if not patient_data:
+        # Get patient directly from database
+        patient = db.query(models.Patient).filter(models.Patient.id == numeric_id).first()
+        if not patient:
             raise HTTPException(status_code=404, detail="Patient not found")
-        return patient_data
+        
+        return {
+            "id": patient.id,
+            "name": patient.name,
+            "age": patient.age,
+            "blood_group": patient.blood_group,
+            "email": patient.email,
+            "phone": patient.phone,
+            "medical_history": patient.medical_history or "No medical history recorded"
+        }
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid patient ID format")
     except Exception as e:
+        print(f"Patient detail error: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving patient details: {str(e)}")
 
 @app.get("/patient/{patient_id}/medical-history")
