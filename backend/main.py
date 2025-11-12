@@ -91,6 +91,36 @@ def root():
 def api_root():
     return {"message": "CuraNet API is running"}
 
+@app.post("/admin/setup-file-sharing")
+def setup_file_sharing(db: Session = Depends(get_db)):
+    """Create medical_reports table if it doesn't exist"""
+    try:
+        # SQL to create medical_reports table
+        sql = """
+        CREATE TABLE IF NOT EXISTS medical_reports (
+            report_id INT AUTO_INCREMENT PRIMARY KEY,
+            patient_id INT NOT NULL,
+            doctor_id INT NOT NULL,
+            session_id INT NULL,
+            report_name VARCHAR(255) NOT NULL,
+            file_key VARCHAR(500) NOT NULL,
+            file_size INT NOT NULL,
+            content_type VARCHAR(100) NOT NULL,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            shared_with TEXT,
+            
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+        )
+        """
+        
+        db.execute(sql)
+        db.commit()
+        
+        return {"message": "File sharing table created successfully"}
+    except Exception as e:
+        return {"error": f"Failed to create table: {str(e)}"}
+
 @app.post("/patients/register", response_model=schemas.PatientResponse)
 def register_patient(patient: schemas.PatientCreate, db: Session = Depends(get_db)):
     if patients.get_patient_by_email(db, patient.email):
