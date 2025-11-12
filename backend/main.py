@@ -916,47 +916,27 @@ async def upload_report(
             file_content, file.filename, file.content_type, patient_id, doctor_id
         )
         
-        # Try to save to database
-        try:
-            # Create table if it doesn't exist
-            db.execute("""
-                CREATE TABLE IF NOT EXISTS medical_reports (
-                    report_id INT AUTO_INCREMENT PRIMARY KEY,
-                    patient_id INT NOT NULL,
-                    doctor_id INT NOT NULL,
-                    session_id INT NULL,
-                    report_name VARCHAR(255) NOT NULL,
-                    file_key VARCHAR(500) NOT NULL,
-                    file_size INT NOT NULL,
-                    content_type VARCHAR(100) NOT NULL,
-                    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    shared_with TEXT
-                )
-            """)
-            
-            # Insert the report
-            db.execute("""
-                INSERT INTO medical_reports 
-                (patient_id, doctor_id, session_id, report_name, file_key, file_size, content_type, shared_with)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (patient_id, doctor_id, session_id, file.filename, file_key, len(file_content), file.content_type, "[]"))
-            
-            db.commit()
-            
-            return {
-                "report_id": 1,  # Mock ID
-                "message": "Report uploaded successfully",
-                "file_name": file.filename
-            }
-            
-        except Exception as db_error:
-            print(f"Database error: {db_error}")
-            # Return success even if DB fails - file is uploaded to S3
-            return {
-                "report_id": 999,
-                "message": "Report uploaded to S3 successfully",
-                "file_name": file.filename
-            }
+        # Save to database
+        report = models.MedicalReport(
+            patient_id=patient_id,
+            doctor_id=doctor_id,
+            session_id=session_id,
+            report_name=file.filename,
+            file_key=file_key,
+            file_size=len(file_content),
+            content_type=file.content_type,
+            shared_with="[]"
+        )
+        
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        
+        return {
+            "report_id": report.report_id,
+            "message": "Report uploaded successfully",
+            "file_name": file.filename
+        }
             
     except Exception as e:
         print(f"Upload error: {e}")
