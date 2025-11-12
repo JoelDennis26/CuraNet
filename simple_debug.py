@@ -4,6 +4,10 @@ Simple debug test
 """
 import boto3
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Test environment variables
 print("=== ENVIRONMENT VARIABLES ===")
