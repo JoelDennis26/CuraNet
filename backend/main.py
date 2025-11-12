@@ -779,7 +779,11 @@ def get_patient_complete_history(patient_id: str, db: Session = Depends(get_db))
         raise HTTPException(status_code=500, detail=f"Error retrieving complete history: {str(e)}")
 
 # File Sharing Endpoints
-s3_service = S3Service()
+try:
+    s3_service = S3Service()
+except Exception as e:
+    print(f"Warning: S3 service initialization failed: {e}")
+    s3_service = None
 
 @app.post("/reports/upload")
 async def upload_report(
@@ -791,15 +795,17 @@ async def upload_report(
     db: Session = Depends(get_db)
 ):
     try:
-        # Read file content
+        # Validate file size (10MB limit)
         file_content = await file.read()
+        if len(file_content) > 10 * 1024 * 1024:  # 10MB
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
         
         # Upload to S3
         file_key = s3_service.upload_file(
             file_content, file.filename, file.content_type, patient_id, doctor_id
         )
         
-        # Save to database
+        # Save to database - accessible to all doctors by default
         report = models.MedicalReport(
             patient_id=patient_id,
             doctor_id=doctor_id,
@@ -808,7 +814,7 @@ async def upload_report(
             file_key=file_key,
             file_size=len(file_content),
             content_type=file.content_type,
-            shared_with=shared_with
+            shared_with="[]"  # Empty means accessible to all doctors
         )
         
         db.add(report)
@@ -821,26 +827,26 @@ async def upload_report(
             "file_name": file.filename
         }
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @app.get("/reports/patient/{patient_id}")
 def get_patient_reports(patient_id: int, doctor_id: int, db: Session = Depends(get_db)):
-    # Get reports where doctor is owner or has access
+    # All doctors can access all patient reports
     reports = db.query(models.MedicalReport).filter(
         models.MedicalReport.patient_id == patient_id
-    ).all()
+    ).order_by(models.MedicalReport.uploaded_at.desc()).all()
     
     accessible_reports = []
     for report in reports:
-        shared_doctors = json.loads(report.shared_with) if report.shared_with else []
-        if report.doctor_id == doctor_id or doctor_id in shared_doctors:
-            accessible_reports.append({
-                "report_id": report.report_id,
-                "report_name": report.report_name,
-                "uploaded_at": report.uploaded_at.isoformat(),
-                "file_size": report.file_size,
-                "uploaded_by": db.query(models.Doctor).filter(models.Doctor.id == report.doctor_id).first().name
-            })
+        doctor = db.query(models.Doctor).filter(models.Doctor.id == report.doctor_id).first()
+        accessible_reports.append({
+            "report_id": report.report_id,
+            "report_name": report.report_name,
+            "uploaded_at": report.uploaded_at.isoformat(),
+            "file_size": report.file_size,
+            "uploaded_by": doctor.name if doctor else "Unknown Doctor"
+        })
     
     return accessible_reports
 
@@ -850,11 +856,7 @@ def download_report(report_id: int, doctor_id: int, db: Session = Depends(get_db
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     
-    # Check access permissions
-    shared_doctors = json.loads(report.shared_with) if report.shared_with else []
-    if report.doctor_id != doctor_id and doctor_id not in shared_doctors:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
+    # All doctors can download patient reports (removed access restriction)
     try:
         # Generate presigned URL
         download_url = s3_service.generate_presigned_url(report.file_key)
