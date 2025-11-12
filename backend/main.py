@@ -895,10 +895,10 @@ async def upload_report(
     db: Session = Depends(get_db)
 ):
     try:
-        # Validate file size (10MB limit)
+        # Validate file size (50MB limit)
         file_content = await file.read()
-        if len(file_content) > 10 * 1024 * 1024:  # 10MB
-            raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+        if len(file_content) > 50 * 1024 * 1024:  # 50MB
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB.")
         
         # Upload to S3
         file_key = s3_service.upload_file(
