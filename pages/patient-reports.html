@@ -255,9 +255,31 @@
         let currentDoctorId = 1;  // Get from session
 
         document.addEventListener('DOMContentLoaded', () => {
+            loadPatientInfo();
             setupFileUpload();
             loadMyReports();
         });
+
+        async function loadPatientInfo() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const patientId = urlParams.get('id') || '1';
+                
+                const response = await fetch(`/api/patient/${patientId}`);
+                if (response.ok) {
+                    const patient = await response.json();
+                    
+                    document.getElementById('userName').textContent = patient.name;
+                    document.getElementById('patientId').textContent = `ID: P${patient.id}`;
+                    document.getElementById('userAvatar').textContent = patient.name[0].toUpperCase();
+                    
+                    // Update current patient ID for uploads
+                    currentPatientId = patient.id;
+                }
+            } catch (error) {
+                console.log('Could not load patient info');
+            }
+        }
 
         function setupFileUpload() {
             const uploadArea = document.getElementById('uploadArea');

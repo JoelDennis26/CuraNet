@@ -157,14 +157,32 @@
 
     <script src="../assets/js/file-sharing.js"></script>
     <script>
-        // Initialize file sharing for demo purposes
-        // In real implementation, get these from session/URL params
-        const patientId = 1; // Replace with actual patient ID
-        const doctorId = 1;   // Replace with actual doctor ID
+        // Get patient and doctor IDs from URL or session
+        const urlParams = new URLSearchParams(window.location.search);
+        const patientId = urlParams.get('id') || 1;
+        const doctorId = 1; // Get from session in real implementation
 
-        // Create upload and reports UI
-        fileSharing.createUploadUI('uploadSection', patientId, doctorId);
-        fileSharing.createReportsListUI('reportsSection', patientId, doctorId);
+        // Load patient info and create UI
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPatientInfo();
+            fileSharing.createUploadUI('uploadSection', patientId, doctorId);
+            fileSharing.createReportsListUI('reportsSection', patientId, doctorId);
+        });
+
+        async function loadPatientInfo() {
+            try {
+                const response = await fetch(`/api/patient/${patientId}`);
+                if (response.ok) {
+                    const patient = await response.json();
+                    
+                    document.getElementById('userName').textContent = patient.name;
+                    document.getElementById('patientId').textContent = `ID: P${patient.id}`;
+                    document.getElementById('userAvatar').textContent = patient.name[0].toUpperCase();
+                }
+            } catch (error) {
+                console.log('Could not load patient info');
+            }
+        }
 
         // Theme toggle functionality (if needed)
         function toggleTheme() {
