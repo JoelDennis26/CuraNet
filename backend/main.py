@@ -51,6 +51,11 @@ base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app.mount("/assets", StaticFiles(directory=os.path.join(base_dir, "assets")), name="assets")
 app.mount("/pages", StaticFiles(directory=os.path.join(base_dir, "pages")), name="pages")
 
+# Serve test files
+@app.get("/test_small_upload.html")
+def test_upload_page():
+    return FileResponse(os.path.join(base_dir, "test_small_upload.html"))
+
 # CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
