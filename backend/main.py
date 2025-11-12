@@ -40,12 +40,6 @@ from . import models
 
 app = FastAPI()
 
-# Increase file upload size limit
-app.add_middleware(
-    lambda request, call_next: call_next(request),
-    max_upload_size=50 * 1024 * 1024  # 50MB
-)
-
 # Mount static files
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app.mount("/assets", StaticFiles(directory=os.path.join(base_dir, "assets")), name="assets")
