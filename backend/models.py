@@ -175,3 +175,20 @@ class TreatmentPlan(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     session = relationship("MedicalSession", back_populates="treatment_plans")
+
+class MedicalReport(Base):
+    __tablename__ = "medical_reports"
+    report_id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("medical_sessions.session_id"), nullable=True)
+    report_name = Column(String(255), nullable=False)
+    file_key = Column(String(500), nullable=False)  # S3 object key
+    file_size = Column(Integer, nullable=False)
+    content_type = Column(String(100), nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    shared_with = Column(Text)  # JSON array of doctor IDs who can access
+    
+    patient = relationship("Patient")
+    doctor = relationship("Doctor")
+    session = relationship("MedicalSession")

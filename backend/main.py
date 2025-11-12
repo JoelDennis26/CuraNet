@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi import FastAPI, Depends, HTTPException, Security, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 from datetime import datetime
 import os
+import json
 
 # Relative imports within backend package
 from . import schemas
@@ -34,6 +35,8 @@ from .crud import (
     medical_sessions,
 )
 from .schemas import AdminAppointmentResponse, AppointmentCreate, AppointmentUpdate
+from .s3_service import S3Service
+from . import models
 
 app = FastAPI()
 
@@ -774,4 +777,108 @@ def get_patient_complete_history(patient_id: str, db: Session = Depends(get_db))
         raise HTTPException(status_code=422, detail="Invalid patient ID format")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving complete history: {str(e)}")
+
+# File Sharing Endpoints
+s3_service = S3Service()
+
+@app.post("/reports/upload")
+async def upload_report(
+    file: UploadFile = File(...),
+    patient_id: int = Form(...),
+    doctor_id: int = Form(...),
+    session_id: Optional[int] = Form(None),
+    shared_with: str = Form("[]"),  # JSON array of doctor IDs
+    db: Session = Depends(get_db)
+):
+    try:
+        # Read file content
+        file_content = await file.read()
+        
+        # Upload to S3
+        file_key = s3_service.upload_file(
+            file_content, file.filename, file.content_type, patient_id, doctor_id
+        )
+        
+        # Save to database
+        report = models.MedicalReport(
+            patient_id=patient_id,
+            doctor_id=doctor_id,
+            session_id=session_id,
+            report_name=file.filename,
+            file_key=file_key,
+            file_size=len(file_content),
+            content_type=file.content_type,
+            shared_with=shared_with
+        )
+        
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        
+        return {
+            "report_id": report.report_id,
+            "message": "Report uploaded successfully",
+            "file_name": file.filename
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@app.get("/reports/patient/{patient_id}")
+def get_patient_reports(patient_id: int, doctor_id: int, db: Session = Depends(get_db)):
+    # Get reports where doctor is owner or has access
+    reports = db.query(models.MedicalReport).filter(
+        models.MedicalReport.patient_id == patient_id
+    ).all()
+    
+    accessible_reports = []
+    for report in reports:
+        shared_doctors = json.loads(report.shared_with) if report.shared_with else []
+        if report.doctor_id == doctor_id or doctor_id in shared_doctors:
+            accessible_reports.append({
+                "report_id": report.report_id,
+                "report_name": report.report_name,
+                "uploaded_at": report.uploaded_at.isoformat(),
+                "file_size": report.file_size,
+                "uploaded_by": db.query(models.Doctor).filter(models.Doctor.id == report.doctor_id).first().name
+            })
+    
+    return accessible_reports
+
+@app.get("/reports/{report_id}/download")
+def download_report(report_id: int, doctor_id: int, db: Session = Depends(get_db)):
+    report = db.query(models.MedicalReport).filter(models.MedicalReport.report_id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    # Check access permissions
+    shared_doctors = json.loads(report.shared_with) if report.shared_with else []
+    if report.doctor_id != doctor_id and doctor_id not in shared_doctors:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        # Generate presigned URL
+        download_url = s3_service.generate_presigned_url(report.file_key)
+        return {"download_url": download_url, "file_name": report.report_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+@app.put("/reports/{report_id}/share")
+def share_report(
+    report_id: int,
+    doctor_ids: List[int],
+    current_doctor_id: int,
+    db: Session = Depends(get_db)
+):
+    report = db.query(models.MedicalReport).filter(models.MedicalReport.report_id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    # Only owner can share
+    if report.doctor_id != current_doctor_id:
+        raise HTTPException(status_code=403, detail="Only report owner can share")
+    
+    report.shared_with = json.dumps(doctor_ids)
+    db.commit()
+    
+    return {"message": "Report sharing updated successfully"}
 
