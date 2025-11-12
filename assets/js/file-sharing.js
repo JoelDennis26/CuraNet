@@ -1,12 +1,7 @@
-// File sharing functionality
-class FileSharing {
-    constructor() {
-        this.currentPatientId = null;
-        this.currentDoctorId = null;
-    }
-
-    // Upload report file
-    async uploadReport(file, patientId, doctorId, sessionId = null, sharedWith = []) {
+// File Sharing JavaScript Module
+const fileSharing = {
+    // Upload file to server
+    async uploadFile(file, patientId, doctorId, sessionId = null, sharedWith = []) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('patient_id', patientId);
@@ -21,7 +16,7 @@ class FileSharing {
             });
 
             if (!response.ok) {
-                throw new Error('Upload failed');
+                throw new Error(`Upload failed: ${response.statusText}`);
             }
 
             return await response.json();
@@ -29,119 +24,84 @@ class FileSharing {
             console.error('Upload error:', error);
             throw error;
         }
-    }
+    },
 
     // Get patient reports
     async getPatientReports(patientId, doctorId) {
         try {
             const response = await fetch(`/reports/patient/${patientId}?doctor_id=${doctorId}`);
+            
             if (!response.ok) {
-                throw new Error('Failed to fetch reports');
+                throw new Error(`Failed to fetch reports: ${response.statusText}`);
             }
+
             return await response.json();
         } catch (error) {
             console.error('Fetch reports error:', error);
             throw error;
         }
-    }
+    },
 
     // Download report
     async downloadReport(reportId, doctorId) {
         try {
             const response = await fetch(`/reports/${reportId}/download?doctor_id=${doctorId}`);
+            
             if (!response.ok) {
-                throw new Error('Download failed');
+                throw new Error(`Download failed: ${response.statusText}`);
             }
-            const data = await response.json();
+
+            const result = await response.json();
             
             // Open download URL in new tab
-            window.open(data.download_url, '_blank');
-            return data;
+            window.open(result.download_url, '_blank');
+            
+            return result;
         } catch (error) {
             console.error('Download error:', error);
             throw error;
         }
-    }
+    },
 
-    // Share report with other doctors
-    async shareReport(reportId, doctorIds, currentDoctorId) {
-        try {
-            const response = await fetch(`/reports/${reportId}/share`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    doctor_ids: doctorIds,
-                    current_doctor_id: currentDoctorId
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Share failed');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Share error:', error);
-            throw error;
-        }
-    }
-
-    // Create file upload UI
+    // Create upload UI
     createUploadUI(containerId, patientId, doctorId) {
         const container = document.getElementById(containerId);
-        if (!container) return;
-
+        
         container.innerHTML = `
-            <div class="file-upload-section">
+            <div class="upload-section">
                 <h3>Upload Medical Report</h3>
                 <div class="upload-area" id="uploadArea">
-                    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
                     <div class="upload-content">
-                        <p>Click to select file or drag and drop</p>
-                        <small>Supported: PDF, Images, Word documents</small>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        <p>Drag and drop files here or <span class="upload-link">browse</span></p>
+                        <p class="upload-hint">Supports PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>
                     </div>
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display: none;">
                 </div>
-                <div class="share-options" style="margin-top: 1rem; display: none;" id="shareOptions">
-                    <label>Share with doctors:</label>
-                    <select multiple id="doctorSelect" class="form-control">
-                        <!-- Will be populated dynamically -->
-                    </select>
+                <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">Uploading...</p>
                 </div>
-                <button id="uploadBtn" class="btn-primary" style="margin-top: 1rem; display: none;">Upload Report</button>
+                <div class="upload-result" id="uploadResult"></div>
             </div>
         `;
 
-        this.setupUploadEvents(patientId, doctorId);
-    }
-
-    // Create reports list UI
-    createReportsListUI(containerId, patientId, doctorId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="reports-section">
-                <h3>Medical Reports</h3>
-                <div id="reportsList" class="reports-list">
-                    <p>Loading reports...</p>
-                </div>
-            </div>
-        `;
-
-        this.loadReports(patientId, doctorId);
-    }
-
-    // Setup upload event handlers
-    setupUploadEvents(patientId, doctorId) {
+        // Add event listeners
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const shareOptions = document.getElementById('shareOptions');
+        const uploadLink = container.querySelector('.upload-link');
 
+        // Click to browse
+        uploadLink.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('click', () => fileInput.click());
-        
+
+        // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('drag-over');
@@ -156,88 +116,86 @@ class FileSharing {
             uploadArea.classList.remove('drag-over');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                this.handleFileSelect(files[0], patientId, doctorId);
+                this.handleFileUpload(files[0], patientId, doctorId);
             }
         });
 
+        // File input change
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                this.handleFileSelect(e.target.files[0], patientId, doctorId);
+                this.handleFileUpload(e.target.files[0], patientId, doctorId);
             }
         });
-
-        uploadBtn.addEventListener('click', () => {
-            this.handleUpload(patientId, doctorId);
-        });
-    }
-
-    // Handle file selection
-    handleFileSelect(file, patientId, doctorId) {
-        const uploadArea = document.getElementById('uploadArea');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const shareOptions = document.getElementById('shareOptions');
-
-        uploadArea.querySelector('.upload-content').innerHTML = `
-            <p><strong>Selected:</strong> ${file.name}</p>
-            <small>Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</small>
-        `;
-
-        uploadBtn.style.display = 'block';
-        shareOptions.style.display = 'block';
-        
-        this.selectedFile = file;
-        this.loadDoctorsList();
-    }
+    },
 
     // Handle file upload
-    async handleUpload(patientId, doctorId) {
-        if (!this.selectedFile) return;
+    async handleFileUpload(file, patientId, doctorId) {
+        const progressDiv = document.getElementById('uploadProgress');
+        const resultDiv = document.getElementById('uploadResult');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
 
-        const uploadBtn = document.getElementById('uploadBtn');
-        const doctorSelect = document.getElementById('doctorSelect');
+        // Show progress
+        progressDiv.style.display = 'block';
+        resultDiv.innerHTML = '';
+
+        try {
+            // Simulate progress (in real implementation, use XMLHttpRequest for progress tracking)
+            progressFill.style.width = '30%';
+            progressText.textContent = 'Uploading to server...';
+
+            const result = await this.uploadFile(file, patientId, doctorId);
+
+            progressFill.style.width = '100%';
+            progressText.textContent = 'Upload complete!';
+
+            setTimeout(() => {
+                progressDiv.style.display = 'none';
+                resultDiv.innerHTML = `
+                    <div class="success-message">
+                        ✅ File "${file.name}" uploaded successfully!
+                    </div>
+                `;
+                
+                // Refresh reports list
+                this.refreshReportsList(patientId, doctorId);
+            }, 1000);
+
+        } catch (error) {
+            progressDiv.style.display = 'none';
+            resultDiv.innerHTML = `
+                <div class="error-message">
+                    ❌ Upload failed: ${error.message}
+                </div>
+            `;
+        }
+    },
+
+    // Create reports list UI
+    createReportsListUI(containerId, patientId, doctorId) {
+        const container = document.getElementById(containerId);
         
-        uploadBtn.textContent = 'Uploading...';
-        uploadBtn.disabled = true;
+        container.innerHTML = `
+            <div class="reports-section">
+                <h3>Medical Reports</h3>
+                <div class="reports-list" id="reportsList">
+                    <div class="loading">Loading reports...</div>
+                </div>
+            </div>
+        `;
 
-        try {
-            const sharedWith = Array.from(doctorSelect.selectedOptions).map(option => parseInt(option.value));
-            
-            await this.uploadReport(this.selectedFile, patientId, doctorId, null, sharedWith);
-            
-            alert('Report uploaded successfully!');
-            this.resetUploadForm();
-            this.loadReports(patientId, doctorId);
-        } catch (error) {
-            alert('Upload failed: ' + error.message);
-        } finally {
-            uploadBtn.textContent = 'Upload Report';
-            uploadBtn.disabled = false;
-        }
-    }
-
-    // Load doctors list for sharing
-    async loadDoctorsList() {
-        try {
-            const response = await fetch('/api/doctors');
-            const doctors = await response.json();
-            
-            const doctorSelect = document.getElementById('doctorSelect');
-            doctorSelect.innerHTML = doctors.map(doctor => 
-                `<option value="${doctor.id}">${doctor.name} (${doctor.department})</option>`
-            ).join('');
-        } catch (error) {
-            console.error('Failed to load doctors:', error);
-        }
-    }
+        this.loadReports(patientId, doctorId);
+    },
 
     // Load and display reports
     async loadReports(patientId, doctorId) {
+        const reportsList = document.getElementById('reportsList');
+        
         try {
             const reports = await this.getPatientReports(patientId, doctorId);
-            const reportsList = document.getElementById('reportsList');
             
             if (reports.length === 0) {
-                reportsList.innerHTML = '<p>No reports found.</p>';
+                reportsList.innerHTML = '<div class="no-reports">No reports found</div>';
                 return;
             }
 
@@ -247,32 +205,154 @@ class FileSharing {
                         <h4>${report.report_name}</h4>
                         <p>Uploaded by: ${report.uploaded_by}</p>
                         <p>Date: ${new Date(report.uploaded_at).toLocaleDateString()}</p>
-                        <p>Size: ${(report.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p>Size: ${this.formatFileSize(report.file_size)}</p>
                     </div>
                     <div class="report-actions">
-                        <button class="btn-primary" onclick="fileSharing.downloadReport(${report.report_id}, ${doctorId})">
+                        <button class="btn-download" onclick="fileSharing.downloadReport(${report.report_id}, ${doctorId})">
                             Download
                         </button>
                     </div>
                 </div>
             `).join('');
-        } catch (error) {
-            document.getElementById('reportsList').innerHTML = '<p>Failed to load reports.</p>';
-        }
-    }
 
-    // Reset upload form
-    resetUploadForm() {
-        document.getElementById('uploadArea').querySelector('.upload-content').innerHTML = `
-            <p>Click to select file or drag and drop</p>
-            <small>Supported: PDF, Images, Word documents</small>
-        `;
-        document.getElementById('uploadBtn').style.display = 'none';
-        document.getElementById('shareOptions').style.display = 'none';
-        document.getElementById('fileInput').value = '';
-        this.selectedFile = null;
+        } catch (error) {
+            reportsList.innerHTML = `<div class="error-message">Failed to load reports: ${error.message}</div>`;
+        }
+    },
+
+    // Refresh reports list
+    refreshReportsList(patientId, doctorId) {
+        this.loadReports(patientId, doctorId);
+    },
+
+    // Format file size
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
+};
+
+// CSS Styles (add to your CSS file)
+const styles = `
+.upload-section, .reports-section {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
 }
 
-// Global instance
-const fileSharing = new FileSharing();
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover, .upload-area.drag-over {
+    border-color: var(--primary-color);
+    background: var(--bg-secondary);
+}
+
+.upload-content svg {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.upload-link {
+    color: var(--primary-color);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.upload-hint {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    transition: width 0.3s ease;
+}
+
+.report-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.report-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.report-info p {
+    margin: 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.btn-download {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-download:hover {
+    background: #2563eb;
+}
+
+.success-message {
+    color: var(--success-color);
+    padding: 1rem;
+    background: #f0fdf4;
+    border-radius: 6px;
+    margin-top: 1rem;
+}
+
+.error-message {
+    color: var(--danger-color);
+    padding: 1rem;
+    background: #fef2f2;
+    border-radius: 6px;
+    margin-top: 1rem;
+}
+
+.loading, .no-reports {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem;
+}
+`;
+
+// Add styles to document
+if (!document.getElementById('file-sharing-styles')) {
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'file-sharing-styles';
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+}
