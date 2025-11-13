@@ -157,6 +157,25 @@ def test_environment():
         "aws_key_prefix": os.getenv('AWS_ACCESS_KEY_ID', '')[:10] if os.getenv('AWS_ACCESS_KEY_ID') else 'NOT SET'
     }
 
+@app.get("/debug-reports")
+def debug_reports(db: Session = Depends(get_db)):
+    """Debug endpoint to check medical reports"""
+    try:
+        reports = db.query(models.MedicalReport).all()
+        return {
+            "total_reports": len(reports),
+            "reports": [{
+                "report_id": r.report_id,
+                "patient_id": r.patient_id,
+                "doctor_id": r.doctor_id,
+                "report_name": r.report_name,
+                "file_key": r.file_key,
+                "uploaded_at": r.uploaded_at.isoformat() if r.uploaded_at else None
+            } for r in reports]
+        }
+    except Exception as e:
+        return {"error": str(e), "error_type": type(e).__name__}
+
 @app.post("/patients/register", response_model=schemas.PatientResponse)
 def register_patient(patient: schemas.PatientCreate, db: Session = Depends(get_db)):
     if patients.get_patient_by_email(db, patient.email):
@@ -908,29 +927,27 @@ async def upload_report(
         )
         print(f"S3 upload successful: {file_key}")
         
-        # Save to database using raw SQL to avoid model issues
+        # Save to database using ORM model
         print("Saving to database...")
         try:
-            from sqlalchemy import text
-            result = db.execute(text("""
-                INSERT INTO medical_reports 
-                (patient_id, doctor_id, session_id, report_name, file_key, file_size, content_type, shared_with)
-                VALUES (:patient_id, :doctor_id, :session_id, :report_name, :file_key, :file_size, :content_type, :shared_with)
-            """), {
-                'patient_id': patient_id,
-                'doctor_id': doctor_id,
-                'session_id': session_id,
-                'report_name': file.filename,
-                'file_key': file_key,
-                'file_size': len(file_content),
-                'content_type': file.content_type,
-                'shared_with': '[]'
-            })
+            report = models.MedicalReport(
+                patient_id=patient_id,
+                doctor_id=doctor_id,
+                session_id=session_id,
+                report_name=file.filename,
+                file_key=file_key,
+                file_size=len(file_content),
+                content_type=file.content_type or 'application/octet-stream',
+                shared_with='[]'
+            )
+            
+            db.add(report)
             db.commit()
-            print("Database save successful")
+            db.refresh(report)
+            print(f"Database save successful, report_id: {report.report_id}")
             
             return {
-                "report_id": result.lastrowid or 1,
+                "report_id": report.report_id,
                 "message": "Report uploaded successfully",
                 "file_name": file.filename
             }
