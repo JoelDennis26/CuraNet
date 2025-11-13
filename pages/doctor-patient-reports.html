@@ -229,7 +229,8 @@
                     document.getElementById('department').textContent = doctor.department;
                     document.getElementById('userAvatar').textContent = doctor.name[0].toUpperCase();
                     
-                    currentDoctorId = doctor.doctor_id;
+                    // Extract just the numeric ID
+                    currentDoctorId = parseInt(doctor.doctor_id) || 1825;
                 } else {
                     // Fallback to default doctor
                     currentDoctorId = 1825;
@@ -240,6 +241,9 @@
             } catch (error) {
                 console.log('Could not load doctor info, using default');
                 currentDoctorId = 1825;
+                document.getElementById('userName').textContent = 'Ankit Prasad';
+                document.getElementById('doctorId').textContent = 'ID: D1825';
+                document.getElementById('department').textContent = 'Neurology';
             }
         }
 
