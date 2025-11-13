@@ -844,7 +844,7 @@
     }
 
     // Add loadAppointments to the DOMContentLoaded event listener
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", function() {
         loadDashboardInfo(); // Your existing function
         loadAppointments(); // New function
         loadActiveSessionsCount(); // New function
@@ -853,6 +853,5 @@
         setInterval(loadActiveSessionsCount, 30000);
     });
   </script>
-    </script>
   </body>
 </html>

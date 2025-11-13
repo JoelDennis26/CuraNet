@@ -578,7 +578,9 @@
       }
 
       // Load dashboard info when page loads
-      document.addEventListener("DOMContentLoaded", loadDashboardInfo);
+      document.addEventListener("DOMContentLoaded", function() {
+        loadDashboardInfo();
+      });
 
       function toggleTheme() {
         const body = document.body;
