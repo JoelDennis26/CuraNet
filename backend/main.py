@@ -176,6 +176,38 @@ def debug_reports(db: Session = Depends(get_db)):
     except Exception as e:
         return {"error": str(e), "error_type": type(e).__name__}
 
+@app.get("/test-create-report")
+def test_create_report(db: Session = Depends(get_db)):
+    """Test creating a medical report record"""
+    try:
+        report = models.MedicalReport(
+            patient_id=182553,
+            doctor_id=1,
+            session_id=None,
+            report_name="test_report.pdf",
+            file_key="test/patient_182553/doctor_1/test_report.pdf",
+            file_size=1024,
+            content_type="application/pdf",
+            shared_with="[]"
+        )
+        
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        
+        return {
+            "status": "success",
+            "report_id": report.report_id,
+            "message": "Test report created successfully"
+        }
+    except Exception as e:
+        db.rollback()
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
 @app.post("/patients/register", response_model=schemas.PatientResponse)
 def register_patient(patient: schemas.PatientCreate, db: Session = Depends(get_db)):
     if patients.get_patient_by_email(db, patient.email):
