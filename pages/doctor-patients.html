@@ -481,6 +481,9 @@
                   <button class="btn-primary" onclick="viewPatientDetails('${patient.patient_id}')">
                     View Details
                   </button>
+                  <button class="btn-secondary" onclick="viewPatientReports('${patient.patient_id}')">
+                    View Reports
+                  </button>
                 </td>
               `;
               tableBody.appendChild(row);
@@ -523,6 +526,11 @@
       // Function to view patient details
       function viewPatientDetails(patientId) {
         window.location.href = `patient-detail.html?id=${patientId}`;
+      }
+
+      // Function to view patient reports
+      function viewPatientReports(patientId) {
+        window.location.href = `doctor-patient-reports.html?patient_id=${patientId}`;
       }
     </script>
   </body>
