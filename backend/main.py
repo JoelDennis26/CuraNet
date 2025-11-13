@@ -176,16 +176,32 @@ def debug_reports(db: Session = Depends(get_db)):
     except Exception as e:
         return {"error": str(e), "error_type": type(e).__name__}
 
+@app.get("/check-ids")
+def check_ids(db: Session = Depends(get_db)):
+    """Check existing patient and doctor IDs"""
+    try:
+        patients = db.query(models.Patient).all()
+        doctors = db.query(models.Doctor).all()
+        
+        return {
+            "patients": [{"id": p.id, "name": p.name} for p in patients[:5]],
+            "doctors": [{"id": d.id, "name": d.name} for d in doctors[:5]],
+            "total_patients": len(patients),
+            "total_doctors": len(doctors)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/test-create-report")
 def test_create_report(db: Session = Depends(get_db)):
     """Test creating a medical report record"""
     try:
         report = models.MedicalReport(
             patient_id=182553,
-            doctor_id=1,
+            doctor_id=1825,  # Use valid doctor ID
             session_id=None,
             report_name="test_report.pdf",
-            file_key="test/patient_182553/doctor_1/test_report.pdf",
+            file_key="test/patient_182553/doctor_1825/test_report.pdf",
             file_size=1024,
             content_type="application/pdf",
             shared_with="[]"
@@ -198,6 +214,8 @@ def test_create_report(db: Session = Depends(get_db)):
         return {
             "status": "success",
             "report_id": report.report_id,
+            "patient_id": 182553,
+            "doctor_id": 1825,
             "message": "Test report created successfully"
         }
     except Exception as e:
