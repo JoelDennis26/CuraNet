@@ -265,7 +265,7 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const patientId = urlParams.get('id') || '1';
                 
-                const response = await fetch(`/api/patient/${patientId}`);
+                const response = await fetch(`http://curanet-env.eba-jtch7ryw.eu-north-1.elasticbeanstalk.com/api/patient/${patientId}`);
                 if (response.ok) {
                     const patient = await response.json();
                     
@@ -325,7 +325,7 @@
 
                 resultDiv.innerHTML = '<div class="loading">Uploading...</div>';
 
-                const response = await fetch('/reports/upload', {
+                const response = await fetch('http://curanet-env.eba-jtch7ryw.eu-north-1.elasticbeanstalk.com/reports/upload', {
                     method: 'POST',
                     body: formData
                 });
@@ -359,7 +359,7 @@
             const reportsList = document.getElementById('reportsList');
             
             try {
-                const response = await fetch(`/reports/patient/${currentPatientId}?doctor_id=${currentDoctorId}`);
+                const response = await fetch(`http://curanet-env.eba-jtch7ryw.eu-north-1.elasticbeanstalk.com/reports/patient/${currentPatientId}?doctor_id=${currentDoctorId}`);
                 
                 if (!response.ok) {
                     reportsList.innerHTML = '<div class="loading">No reports found</div>';
@@ -396,7 +396,7 @@
 
         async function downloadReport(reportId) {
             try {
-                const response = await fetch(`/reports/${reportId}/download?doctor_id=${currentDoctorId}`);
+                const response = await fetch(`http://curanet-env.eba-jtch7ryw.eu-north-1.elasticbeanstalk.com/reports/${reportId}/download?doctor_id=${currentDoctorId}`);
                 const result = await response.json();
                 
                 if (response.ok) {
