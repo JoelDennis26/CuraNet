@@ -251,7 +251,7 @@
     </div>
 
     <script>
-        let currentPatientId = 1; // Get from URL or session
+        let currentPatientId = 182553; // Default to valid patient ID
         let currentDoctorId = 1825;  // Use valid doctor ID
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -263,7 +263,12 @@
         async function loadPatientInfo() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
-                const patientId = urlParams.get('id') || '1';
+                let patientId = urlParams.get('id') || '182553'; // Default to valid patient ID
+                
+                // Remove P prefix if present
+                if (patientId.startsWith('P')) {
+                    patientId = patientId.substring(1);
+                }
                 
                 const response = await fetch(`http://curanet-env.eba-jtch7ryw.eu-north-1.elasticbeanstalk.com/api/patient/${patientId}`);
                 if (response.ok) {
@@ -275,9 +280,15 @@
                     
                     // Update current patient ID for uploads
                     currentPatientId = patient.id;
+                } else {
+                    // Fallback to default patient ID
+                    currentPatientId = 182553;
+                    document.getElementById('userName').textContent = 'Patient';
+                    document.getElementById('patientId').textContent = 'ID: P182553';
                 }
             } catch (error) {
-                console.log('Could not load patient info');
+                console.log('Could not load patient info, using default');
+                currentPatientId = 182553;
             }
         }
 
