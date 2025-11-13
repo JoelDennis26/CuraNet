@@ -242,12 +242,15 @@
 
         async function loadPatientReports() {
             const urlParams = new URLSearchParams(window.location.search);
-            currentPatientId = urlParams.get('patient_id');
+            let patientIdParam = urlParams.get('patient_id');
             
-            if (!currentPatientId) {
+            if (!patientIdParam) {
                 window.location.href = 'doctor-patients.html';
                 return;
             }
+
+            // Remove P prefix if present
+            currentPatientId = patientIdParam.startsWith('P') ? patientIdParam.substring(1) : patientIdParam;
 
             // Load patient info
             try {
